@@ -567,7 +567,7 @@ if st.button("📄 Generate PDF Report (A4)"):
     }
     
     # 4. เรียกสร้าง PDF และสร้างปุ่มดาวน์โหลด
-    pdf_bytes = create_pdf_report(report_data)
+    pdf_output = create_pdf_report(report_data)
     
 if pdf_output is not None:
     st.download_button(
@@ -589,6 +589,7 @@ else:
 
 st.divider()
 st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
+
 
 
 
