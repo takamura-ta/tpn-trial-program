@@ -34,13 +34,13 @@ if not os.path.exists(font_path) or not os.path.exists(font_bold_path):
         return pdf.output()
 
     # 2. โหลดฟอนต์ (ต้องใส่ uni=True หากใช้ fpdf รุ่นเก่า แต่ fpdf2 ไม่ต้องใส่)
-    try:
-        # บรรทัดที่ 37: ต้องเยื้องเข้าไปมากกว่าคำว่า try 4 ช่อง (Spacebar 4 ครั้ง)
-        pdf.add_font('THSarabun', '', font_path)
-        pdf.add_font('THSarabun', 'B', font_bold_path)
-        font_main = 'THSarabun'
-    except:
-        font_main = 'Arial'
+try:
+    # บรรทัดที่ 37: ต้องเยื้องเข้าไปมากกว่าคำว่า try 4 ช่อง (Spacebar 4 ครั้ง)
+    pdf.add_font('THSarabun', '', font_path)
+    pdf.add_font('THSarabun', 'B', font_bold_path)
+    font_main = 'THSarabun'
+except:
+    font_main = 'Arial'
     
     # 3. ต้องเรียก set_font เป็น 'THSarabun' ทันที
     pdf.set_font('THSarabun', 'B', 20)
@@ -605,6 +605,7 @@ if naf_score > 0:
 
     st.divider()
     st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
+
 
 
 
