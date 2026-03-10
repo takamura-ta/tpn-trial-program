@@ -81,8 +81,14 @@ def create_pdf_report(data):
 
         return pdf.output()
 
+    try:
+        # สำหรับ fpdf2: การเรียก output() จะคืนค่าเป็น bytes/bytearray
+        pdf_bytes = pdf.output()
+        if isinstance(pdf_bytes, str): 
+            return pdf_bytes.encode('latin-1')
+        return bytes(pdf_bytes) 
     except Exception as e:
-        print(f"PDF Error: {e}")
+        print(f"PDF Output Error: {e}")
         return None
 
 # 1. Setup Theme และหน้าจอ
@@ -452,13 +458,20 @@ if st.button("📄 Prepare Report & Generate PDF"):
 
 # --- 6. ส่วนแสดงปุ่มดาวน์โหลด (ต้องอยู่นอกปุ่ม Generate เพื่อให้แสดงค้างไว้ได้) ---
 if st.session_state.pdf_output is not None:
-    st.download_button(
-        label="💾 CLICK HERE TO DOWNLOAD PDF REPORT",
-        data=st.session_state.pdf_output,
-        file_name=f"TPN_Report_{name}.pdf",
-        mime="application/pdf",
-        key="download_pdf_final"
-    )
+    # มั่นใจว่าข้อมูลเป็น bytes แน่นอน
+    try:
+        download_data = st.session_state.pdf_output
+        
+        st.download_button(
+            label="💾 CLICK HERE TO DOWNLOAD PDF REPORT",
+            data=download_data,
+            file_name=f"TPN_Report_{name}.pdf",
+            mime="application/pdf",
+            key="download_pdf_final"
+        )
+    except Exception as e:
+        st.error(f"เกิดข้อผิดพลาดในการเตรียมไฟล์ดาวน์โหลด: {e}")
+
 
 
 
