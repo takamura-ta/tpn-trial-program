@@ -453,19 +453,22 @@ if st.button("📄 Prepare Report & Generate PDF"):
 
 # --- 6. ส่วนแสดงปุ่มดาวน์โหลด (ต้องอยู่นอกปุ่ม Generate เพื่อให้แสดงค้างไว้ได้) ---
 if st.session_state.pdf_output is not None:
-    # มั่นใจว่าข้อมูลเป็น bytes แน่นอน
     try:
-        download_data = st.session_state.pdf_output
+        # บังคับแปลงจาก bytearray เป็น bytes ที่นี่อีกครั้งหนึ่ง
+        # และใช้ BytesIO เพื่อให้ Streamlit อ่านข้อมูลได้แน่นอน
+        from io import BytesIO
+        download_data = BytesIO(st.session_state.pdf_output)
         
         st.download_button(
             label="💾 CLICK HERE TO DOWNLOAD PDF REPORT",
-            data=download_data,
+            data=download_data, # ส่งเป็น BytesIO object แทน
             file_name=f"TPN_Report_{name}.pdf",
             mime="application/pdf",
             key="download_pdf_final"
         )
     except Exception as e:
         st.error(f"เกิดข้อผิดพลาดในการเตรียมไฟล์ดาวน์โหลด: {e}")
+
 
 
 
