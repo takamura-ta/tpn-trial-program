@@ -8,18 +8,28 @@ import os
 def create_pdf_report(data):
     pdf = FPDF(orientation='P', unit='mm', format='A4')
     
-    font_main = 'Arial' 
     current_dir = os.path.dirname(os.path.abspath(__file__))
     font_path = os.path.join(current_dir, 'THSarabunNew.ttf')
     font_bold_path = os.path.join(current_dir, 'THSarabunNew_Bold.ttf')
 
-    if os.path.exists(font_path) and os.path.exists(font_bold_path):
-        try:
-            pdf.add_font('THSarabun', '', font_path)
-            pdf.add_font('THSarabun', 'B', font_bold_path)
-            font_main = 'THSarabun'
-        except:
-            font_main = 'Arial'
+    # 1. ตรวจสอบไฟล์ฟอนต์ก่อนเป็นอันดับแรก
+    if not os.path.exists(font_path) or not os.path.exists(font_bold_path):
+        # ถ้าไม่มีฟอนต์ไทย ห้ามใส่ภาษาไทยใน PDF เด็ดขาด ไม่งั้นจะ Error ทันที
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(190, 10, "Error: Thai Font not found. Please check .ttf files.", 0, 1, 'C')
+        return pdf.output()
+
+    # 2. โหลดฟอนต์ (ต้องใส่ uni=True หากใช้ fpdf รุ่นเก่า แต่ fpdf2 ไม่ต้องใส่)
+    pdf.add_font('THSarabun', '', font_path)
+    pdf.add_font('THSarabun', 'B', font_bold_path)
+    
+    # 3. ต้องเรียก set_font เป็น 'THSarabun' ทันที
+    pdf.set_font('THSarabun', 'B', 20)
+    pdf.add_page()
+    
+    # 4. ตอนนี้จะสามารถใส่ภาษาไทยได้แล้วโดยไม่เกิด Exception
+    pdf.cell(190, 10, "รายงานแผนการให้โภชนบำบัดทางหลอดเลือดดำ (TPN Report)", 0, 1, 'C')
     
     pdf.add_page()
     
@@ -575,6 +585,7 @@ else:
 
 st.divider()
 st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
+
 
 
 
