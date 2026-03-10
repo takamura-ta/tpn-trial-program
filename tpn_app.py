@@ -24,8 +24,7 @@ ibw = 0.0
 bmi = 0.0
 pdf_output = st.session_state.pdf_output
 report_data = {}
-	
-    # 1. ตรวจสอบไฟล์ฟอนต์ก่อนเป็นอันดับแรก
+
 if not os.path.exists(font_path) or not os.path.exists(font_bold_path):
         # ถ้าไม่มีฟอนต์ไทย ห้ามใส่ภาษาไทยใน PDF เด็ดขาด ไม่งั้นจะ Error ทันที
         pdf.add_page()
@@ -609,6 +608,7 @@ else:
 # บรรทัดเหล่านี้ต้องกลับมาอยู่ชิดขอบซ้าย (หรือระดับเดียวกับ if naf_score)
 st.divider()
 st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
+
 
 
 
