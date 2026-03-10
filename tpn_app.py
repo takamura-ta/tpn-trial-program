@@ -81,16 +81,6 @@ def create_pdf_report(data):
 
         return pdf.output()
 
-        try:
-            # สำหรับ fpdf2: การเรียก output() จะคืนค่าเป็น bytes/bytearray
-            pdf_bytes = pdf.output()
-            if isinstance(pdf_bytes, str): 
-                return pdf_bytes.encode('latin-1')
-            return bytes(pdf_bytes) 
-        except Exception as e:
-            print(f"PDF Output Error: {e}")
-            return None
-
 # 1. Setup Theme และหน้าจอ
 st.set_page_config(page_title="Thai TPN Support System", layout="wide")
 
@@ -471,6 +461,7 @@ if st.session_state.pdf_output is not None:
         )
     except Exception as e:
         st.error(f"เกิดข้อผิดพลาดในการเตรียมไฟล์ดาวน์โหลด: {e}")
+
 
 
 
