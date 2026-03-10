@@ -569,22 +569,24 @@ if st.button("📄 Generate PDF Report (A4)"):
     # 4. เรียกสร้าง PDF และสร้างปุ่มดาวน์โหลด
     pdf_bytes = create_pdf_report(report_data)
     
-    if pdf_bytes:
-        st.success("✅ สร้างรายงานสำเร็จ! คลิกปุ่มด้านล่างเพื่อดาวน์โหลด")
-        st.download_button(
-        label="💾 Download TPN Report",
-        data=pdf_output, # fpdf2 คืนค่าเป็น bytes อยู่แล้ว
+    if pdf_output is not None:
+    st.download_button(
+        label="💾 Download TPN Report (PDF)",
+        data=pdf_output,  # ชื่อต้องตรงกับบรรทัดบน
         file_name=f"TPN_Report_{name}.pdf",
-        mime="application/pdf"
+        mime="application/pdf",
+        key="download_pdf_btn" # เพิ่ม key เพื่อป้องกันปุ่มตีกันใน Streamlit
     )
     else:
-        st.error("❌ ไม่พบไฟล์ฟอนต์สำหรับสร้างภาษาไทยใน PDF")
+        # กรณีสร้าง PDF ไม่สำเร็จ (เช่น หาฟอนต์ไม่เจอ)
+        st.error("❌ ไม่สามารถสร้างไฟล์ PDF ได้ กรุณาตรวจสอบการตั้งค่าฟอนต์")
 
 else:
     st.warning("⚠️ โปรดประเมิน NAF และยืนยัน Indication ก่อนเริ่ม")
 
 st.divider()
 st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
+
 
 
 
