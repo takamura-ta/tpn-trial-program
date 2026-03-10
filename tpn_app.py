@@ -18,7 +18,7 @@ bmi = 0.0
 pdf_output = st.session_state.pdf_output
 report_data = {}
 
-# --- 2. FUNCTION: CREATE PDF REPORT (รวมจุดเช็คฟอนต์ไว้ข้างในให้จบ) ---
+# --- 2. FUNCTION: CREATE PDF REPORT ---
 def create_pdf_report(data):
     try:
         pdf = FPDF(orientation='P', unit='mm', format='A4')
@@ -32,7 +32,7 @@ def create_pdf_report(data):
             pdf.add_page()
             pdf.set_font("Arial", 'B', 16)
             pdf.cell(190, 10, "Error: Thai Font not found (.ttf)", 0, 1, 'C')
-            return pdf.output()
+            return bytes(pdf.output())
 
         # โหลดฟอนต์
         pdf.add_font('THSarabun', '', font_path)
@@ -42,7 +42,7 @@ def create_pdf_report(data):
         pdf.set_font(font_main, 'B', 20)
         pdf.add_page()
 
-        # --- ส่วนเนื้อหา PDF (รวบยอด) ---
+        # --- ส่วนเนื้อหา PDF ---
         pdf.cell(190, 10, "รายงานแผนการให้โภชนบำบัดทางหลอดเลือดดำ (TPN Report)", 0, 1, 'C')
         pdf.set_font(font_main, '', 13)
         pdf.cell(190, 6, f"Report Date: {pd.Timestamp.now().strftime('%d/%m/%Y %H:%M')}", 0, 1, 'R')
@@ -64,9 +64,6 @@ def create_pdf_report(data):
         pdf.cell(63, 8, f"IBW: {data.get('ibw', 0):.1f} kg", 0, 0)
         pdf.cell(64, 8, f"BMI: {data.get('bmi', 0):.1f} kg/m2", 0, 1)
 
-        # (ส่วนอื่นๆ ของ PDF ใส่ต่อตรงนี้ตามโครงสร้างเดิมของคุณ...)
-        # เพื่อความกระชับ ผมจะข้ามไปส่วนท้ายฟังก์ชันเลยครับ
-
         # --- ส่วน Signature Section ---
         signature_y = 260 
         pdf.set_y(signature_y)
@@ -79,16 +76,15 @@ def create_pdf_report(data):
         pdf.set_xy(110, signature_y)
         pdf.multi_cell(85, 7, f"( {p2_name} )\nแพทย์ผู้ตรวจสอบ/ผู้ให้คำปรึกษา", 0, 'C')
 
-    try:
+        # --- บรรทัดที่สำคัญมาก: การ Output ข้อมูล ---
         pdf_bytes = pdf.output()
         if isinstance(pdf_bytes, str): 
             return pdf_bytes.encode('latin-1')
-        return bytes(pdf_bytes) 
+        return bytes(pdf_bytes)
+
     except Exception as e:
-        print(f"PDF Output Error: {e}")
+        print(f"PDF Error: {e}")
         return None
-		
-        return pdf.output()
 
 # 1. Setup Theme และหน้าจอ
 st.set_page_config(page_title="Thai TPN Support System", layout="wide")
@@ -470,6 +466,7 @@ if st.session_state.pdf_output is not None:
         )
     except Exception as e:
         st.error(f"เกิดข้อผิดพลาดในการเตรียมไฟล์ดาวน์โหลด: {e}")
+
 
 
 
