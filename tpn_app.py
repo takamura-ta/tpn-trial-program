@@ -450,7 +450,6 @@ if naf_score > 0:
     
     # 3. ตรวจสอบว่าฟังก์ชันสร้าง PDF สำเร็จหรือไม่
     if pdf_output is not None:
-	    st.write(f"PDF Status: {'Ready' if pdf_output else 'Empty'}")
         st.download_button(
             label="💾 Download TPN Report (PDF)",
             data=pdf_output, 
@@ -470,6 +469,7 @@ else:
 # บรรทัดเหล่านี้ต้องกลับมาอยู่ชิดขอบซ้าย (หรือระดับเดียวกับ if naf_score)
 st.divider()
 st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
+
 
 
 
