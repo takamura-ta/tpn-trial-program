@@ -8,16 +8,19 @@ import os
 def create_pdf_report(data):
     pdf = FPDF(orientation='P', unit='mm', format='A4')
     
+    # ดึงตำแหน่งที่อยู่ของไฟล์ปัจจุบัน
     current_dir = os.path.dirname(os.path.abspath(__file__))
     font_path = os.path.join(current_dir, 'THSarabunNew.ttf')
     font_bold_path = os.path.join(current_dir, 'THSarabunNew_Bold.ttf')
 
-    if os.path.exists(font_path) and os.path.exists(font_bold_path):
+    # ตรวจสอบว่ามีไฟล์ฟอนต์จริงไหม
+    if os.path.exists(font_path):
         pdf.add_font('THSarabun', '', font_path)
         pdf.add_font('THSarabun', 'B', font_bold_path)
-        font_main = 'THSarabun'
+        pdf.set_font('THSarabun', '', 14)
     else:
-        font_main = 'Arial'
+        # หากหาฟอนต์ไม่เจอ ให้หยุดทำงานและแจ้งเตือน แทนการปล่อยให้ Error latin1
+        return None
 
     pdf.add_page()
     
@@ -526,6 +529,11 @@ if is_ready:
     # --- 5. REPORT GENERATION ---
     st.divider()
     if st.button("📄 Generate PDF Report (A4)"):
+    pdf_bytes = create_pdf_report(report_data)
+        if pdf_bytes is not None:
+            st.download_button(...)
+        else:
+            st.error("❌ ไม่พบไฟล์ฟอนต์ THSarabunNew.ttf บนเซิร์ฟเวอร์ กรุณาตรวจสอบการอัปโหลดไฟล์")
         # ทุกบรรทัดด้านล่างนี้ต้องย่อหน้า (Indent) เข้ามาภายใต้ if
         inds = []
         if c1: inds.append("Malnutrition/Risk")
@@ -575,7 +583,4 @@ if is_ready:
             st.warning("⚠️ โปรดประเมิน NAF และยืนยัน Indication ก่อนเริ่ม")
 
         st.divider()
-
         st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
-
-
