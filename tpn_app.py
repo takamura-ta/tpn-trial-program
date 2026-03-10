@@ -78,15 +78,15 @@ def create_pdf_report(data):
         pdf.multi_cell(85, 7, f"( {p1_name} )\nแพทย์ผู้สั่งการรักษา", 0, 'C')
         pdf.set_xy(110, signature_y)
         pdf.multi_cell(85, 7, f"( {p2_name} )\nแพทย์ผู้ตรวจสอบ/ผู้ให้คำปรึกษา", 0, 'C')
-        try:
-            pdf_bytes = pdf.output()
-            if isinstance(pdf_bytes, str): 
-                return pdf_bytes.encode('latin-1')
-            return bytes(pdf_bytes) 
-        except Exception as e:
-            print(f"PDF Output Error: {e}")
-            return None
-            return pdf.output()
+    try:
+        pdf_bytes = pdf.output()
+        if isinstance(pdf_bytes, str): 
+            return pdf_bytes.encode('latin-1')
+        return bytes(pdf_bytes) 
+    except Exception as e:
+        print(f"PDF Output Error: {e}")
+        return None
+        return pdf.output()
 
 # 1. Setup Theme และหน้าจอ
 st.set_page_config(page_title="Thai TPN Support System", layout="wide")
@@ -468,6 +468,7 @@ if st.session_state.pdf_output is not None:
         )
     except Exception as e:
         st.error(f"เกิดข้อผิดพลาดในการเตรียมไฟล์ดาวน์โหลด: {e}")
+
 
 
 
