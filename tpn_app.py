@@ -25,7 +25,7 @@ def create_pdf_report(data):
     
     # --- 1. Header (เด่นชัด) ---
     pdf.set_font(font_main, 'B', 20)
-    pdf.cell(190, 10, "รายงานแผนการให้โภชนบำบัดทางหลอดเลือดดำ (TPN Report)", 0, 1, 'C')
+    pdf.cell(190, 10, "TPN Report", 0, 1, 'C')
     pdf.set_font(font_main, '', 13)
     pdf.cell(190, 6, f"วันที่ออกรายงาน: {pd.Timestamp.now().strftime('%d/%m/%Y %H:%M')}", 0, 1, 'R')
     pdf.line(10, 28, 200, 28)
@@ -575,5 +575,6 @@ else:
 
 st.divider()
 st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
+
 
 
