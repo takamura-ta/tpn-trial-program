@@ -463,12 +463,10 @@ else:
     # else ตัวนี้ต้องอยู่ตรงแนวเดียวกับ if (naf_score > 0)
     st.warning("⚠️ โปรดประเมิน NAF และยืนยัน Indication ก่อนเริ่มสร้างรายงาน")
 
-else:
-    st.error("ไม่สามารถดาวน์โหลดได้ เนื่องจากไฟล์ PDF ไม่ถูกสร้างขึ้น")
-
 # บรรทัดเหล่านี้ต้องกลับมาอยู่ชิดขอบซ้าย (หรือระดับเดียวกับ if naf_score)
 st.divider()
 st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
+
 
 
 
