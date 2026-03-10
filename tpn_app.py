@@ -4,209 +4,192 @@ import math
 from fpdf import FPDF
 import os
 
-# --- FUNCTION: CREATE PDF REPORT (ฉบับอัปเดต Indication & Supplements) ---
+# --- FUNCTION: CREATE PDF REPORT (Single Page - Balanced Layout) ---
 def create_pdf_report(data):
     pdf = FPDF(orientation='P', unit='mm', format='A4')
     
-    # ดึงตำแหน่งที่อยู่ของไฟล์ปัจจุบัน
+    font_main = 'Arial' 
     current_dir = os.path.dirname(os.path.abspath(__file__))
     font_path = os.path.join(current_dir, 'THSarabunNew.ttf')
     font_bold_path = os.path.join(current_dir, 'THSarabunNew_Bold.ttf')
 
-    # ตรวจสอบว่ามีไฟล์ฟอนต์จริงไหม
-    if os.path.exists(font_path):
-        pdf.add_font('THSarabun', '', font_path)
-        pdf.add_font('THSarabun', 'B', font_bold_path)
-        pdf.set_font('THSarabun', '', 14)
-    else:
-        # หากหาฟอนต์ไม่เจอ ให้หยุดทำงานและแจ้งเตือน แทนการปล่อยให้ Error latin1
-        return None
-
+    if os.path.exists(font_path) and os.path.exists(font_bold_path):
+        try:
+            pdf.add_font('THSarabun', '', font_path)
+            pdf.add_font('THSarabun', 'B', font_bold_path)
+            font_main = 'THSarabun'
+        except:
+            font_main = 'Arial'
+    
     pdf.add_page()
     
-    # 1. Header
+    # --- 1. Header (เด่นชัด) ---
     pdf.set_font(font_main, 'B', 20)
     pdf.cell(190, 10, "รายงานแผนการให้โภชนบำบัดทางหลอดเลือดดำ (TPN Report)", 0, 1, 'C')
-    pdf.set_font(font_main, '', 12)
-    pdf.cell(190, 7, f"วันที่ออกรายงาน: {pd.Timestamp.now().strftime('%d/%m/%Y %H:%M')}", 0, 1, 'R')
-    pdf.line(10, 32, 200, 32)
-    pdf.ln(5)
+    pdf.set_font(font_main, '', 13)
+    pdf.cell(190, 6, f"วันที่ออกรายงาน: {pd.Timestamp.now().strftime('%d/%m/%Y %H:%M')}", 0, 1, 'R')
+    pdf.line(10, 28, 200, 28)
+    pdf.ln(6)
 
-    # 2. ข้อมูลผู้ป่วย
-    pdf.set_font(font_main, 'B', 15)
+    # --- 2. ข้อมูลผู้ป่วย (Font 14) ---
+    pdf.set_font(font_main, 'B', 15) # หัวข้อ 15
     pdf.set_fill_color(240, 240, 240)
-    pdf.cell(190, 8, " 1. ข้อมูลผู้ป่วย (Patient Information)", 0, 1, 'L', True)
-    pdf.set_font(font_main, '', 14)
-    pdf.set_x(15)
-    pdf.cell(63, 8, f"ชื่อ-นามสกุล: {data['name']}", 0, 0)
-    pdf.cell(63, 8, f"อายุ: {data['age']} ปี", 0, 0)
-    pdf.cell(64, 8, f"หอผู้ป่วย: {data['ward']}", 0, 1)
-    pdf.set_x(15)
-    pdf.cell(63, 8, f"น้ำหนัก: {data['weight']} kg", 0, 0)
-    pdf.cell(63, 8, f"IBW: {data['ibw']:.1f} kg", 0, 0)
-    pdf.cell(64, 8, f"BMI: {data['bmi']:.1f} kg/m2", 0, 1)
+    pdf.cell(190, 9, " 1. ข้อมูลผู้ป่วย (Patient Information)", 0, 1, 'L', True)
+    
+    pdf.set_font(font_main, '', 14) # รายละเอียด 14
     pdf.ln(2)
-
-    # 3. ข้อบ่งชี้และความจำเป็น (Indications)
-    pdf.set_font(font_main, 'B', 15)
-    pdf.cell(190, 8, " 2. ข้อบ่งชี้และความจำเป็น (Indications)", 0, 1, 'L', True)
-    pdf.ln(2)
-
-    # หัวข้อ: PN Indication
     pdf.set_x(15)
-    pdf.set_font(font_main, 'B', 13)
-    pdf.cell(35, 7, "[ PN Indication ] : ", 0, 0) # พิมพ์หัวข้อหนาๆ และไม่ขึ้นบรรทัดใหม่
-    
-    pdf.set_font(font_main, '', 13)
-    pn_text = ", ".join(data['indications']) if data['indications'] else "-"
-    # ใช้ multi_cell เพื่อให้ถ้าข้อความยาวเกิน 155mm มันจะตัดลงบรรทัดใหม่ให้เองโดยไม่ตกขอบ
-    pdf.multi_cell(155, 7, pn_text, 0, 'L')
-
-    # หัวข้อ: EN Contraindications
+    pdf.cell(63, 8, f"ชื่อ: {data.get('name', '-')}", 0, 0)
+    pdf.cell(63, 8, f"อายุ: {data.get('age', '-')} ปี", 0, 0)
+    pdf.cell(64, 8, f"หอผู้ป่วย: {data.get('ward', '-')}", 0, 1)
     pdf.set_x(15)
-    pdf.set_font(font_main, 'B', 13)
-    pdf.cell(45, 7, "[ EN Contraindications ] : ", 0, 0)
-    
-    pdf.set_font(font_main, '', 13)
-    en_text = ", ".join(data['en_contra']) if data['en_contra'] else "-"
-    pdf.multi_cell(145, 7, en_text, 0, 'L')
-
-    # 4. ผลการประเมิน Nutritional assessment
-    pdf.ln(2)
-    pdf.set_x(10)
-    pdf.set_font(font_main, 'B', 15)
-    pdf.cell(190, 8, " 3. การประเมินโภชนาการและความเสี่ยงการขาดสารอาหาร", 0, 1, 'L', True)
-    pdf.ln(2)
-    # แสดง NAF Score และระดับความรุนแรง
-    pdf.set_font(font_main, '', 15)
-    pdf.set_x(15)
-    pdf.cell(95, 7, f"NAF Score: {data['naf_score']} ({data['naf_cat']})", 0, 0)
-    pdf.cell(95, 7, f"ระดับความรุนแรง: {data['mal_level']}", 0, 1)
-
-    # แสดงความเสี่ยง Refeeding Syndrome (ตัวหนังสือสีแดงถ้าเป็น High Risk)
-    if data['is_refeeding'] == "High Risk":
-        pdf.set_text_color(200, 0, 0) # สีแดง
-    
-    pdf.set_x(15)
-    pdf.set_font(font_main, 'B', 13)
-    pdf.cell(190, 7, f"ความเสี่ยง Refeeding Syndrome: {data['is_refeeding']}", 0, 1)
-    
-    # แสดงปัจจัยเสี่ยง (ถ้ามี)
-    if data['refeeding_details']:
-        pdf.set_font(font_main, '', 12)
-        pdf.set_x(15)
-        pdf.multi_cell(180, 6, f"ปัจจัยเสี่ยงที่พบ: {data['refeeding_details']}", 0, 'L')
-    
-    pdf.set_text_color(0, 0, 0) # รีเซ็ตสีเป็นสีดำปกติ
-    pdf.ln(2)
-
-    # 5. เป้าหมายและแผนการให้ (Prescription)
-    pdf.set_font(font_main, 'B', 15)
-    pdf.cell(190, 8, " 4. แผนการให้สารอาหาร (Prescription)", 0, 1, 'L', True)
-    pdf.ln(2)
-    
-    # ส่วนแสดง Target (เพิ่มใหม่เพื่อให้เห็นเป้าหมายก่อนดูแผนการให้)
-    pdf.set_font(font_main, 'B', 13)
-    pdf.set_x(15)
-    pdf.cell(180, 7, f"เป้าหมายการคำนวณ (Target): Energy {data['target_kcal']:.0f} kcal/day | Protein {data['target_pro']:.1f} g/day", 0, 1, 'L')
-    pdf.ln(1)
-
-    # หัวตาราง
-    pdf.set_font(font_main, 'B', 14)
-    pdf.cell(75, 10, "รายการสารอาหาร", 1, 0, 'C')
-    pdf.cell(45, 10, "Rate (ml/hr)", 1, 0, 'C')
-    pdf.cell(35, 10, "เวลา (hr)", 1, 0, 'C')
-    pdf.cell(35, 10, "ปริมาณรวม (ml)", 1, 1, 'C')
-    
-    # ข้อมูลในตาราง
-    pdf.set_font(font_main, '', 14)
-    pdf.cell(75, 10, f"{data['pn_name']}", 1, 0, 'C')
-    pdf.cell(45, 10, f"{data['final_rate']}", 1, 0, 'C')
-    pdf.cell(35, 10, f"{data['hours']}", 1, 0, 'C')
-    pdf.cell(35, 10, f"{data['actual_pn_vol']:.0f}", 1, 1, 'C')
-    
-    if data['add_amiparen']:
-        pdf.cell(75, 10, "10% Amiparen", 1, 0, 'C')
-        pdf.cell(45, 10, f"{data['final_ami_rate']}", 1, 0, 'C')
-        pdf.cell(35, 10, f"{data['hours']}", 1, 0, 'C')
-        pdf.cell(35, 10, f"{data['actual_ami_vol']:.0f}", 1, 1, 'C')
-
-    # แถวสรุป Actual Delivered (ต่อท้ายตารางทันที)
-    pdf.set_font(font_main, 'B', 13)
-    pdf.set_fill_color(245, 245, 245)
-    summary_text = f"ได้รับจริง (Actual): Energy {data['delivered_kcal']:.0f} kcal ({ (data['delivered_kcal']/data['target_kcal']*100):.0f}%) | Protein {data['delivered_pro']:.1f} g ({ (data['delivered_pro']/data['target_pro']*100):.0f}%)"
-    pdf.cell(190, 10, summary_text, 1, 1, 'C', True)
+    pdf.cell(63, 8, f"น้ำหนัก: {data.get('weight', 0)} kg", 0, 0)
+    pdf.cell(63, 8, f"IBW: {data.get('ibw', 0):.1f} kg", 0, 0)
+    pdf.cell(64, 8, f"BMI: {data.get('bmi', 0):.1f} kg/m2", 0, 1)
     pdf.ln(4)
 
-    # 6. Vitamin & Trace Elements (แสดงรายละเอียดการเลือก)
+    # --- 3. Indications ---
     pdf.set_font(font_main, 'B', 15)
-    pdf.cell(190, 8, " 5. วิตามินและแร่ธาตุ (Vitamin & Trace Elements)", 0, 1, 'L', True)
-    pdf.ln(1)
+    pdf.cell(190, 9, " 2. ข้อบ่งชี้และความจำเป็น (Indications)", 0, 1, 'L', True)
     
     pdf.set_font(font_main, '', 14)
-    # ใช้ตัวแปร flag เพื่อเช็คว่ามีการเลือกอย่างน้อย 1 รายการหรือไม่
-    has_any_supp = False
-    
-    # รายการวิตามินและแร่ธาตุ (บังคับ set_x(15) ทุกครั้งเพื่อกันตกขอบ)
-    supps = []
-    if data.get('b_complex', 0) > 0: supps.append(f"Vitamin B complex {data['b_complex']} vial(s)")
-    if data.get('soluvit'): supps.append("Soluvit-N 1 vial")
-    if data.get('vitalipid'): supps.append("Vitalipid-N Adult 1 vial")
-    if data.get('addamel'): supps.append("Addamel-N 1 vial")
-    
-    if supps:
-        pdf.set_x(15)
-        pdf.multi_cell(180, 7, f"• วิตามิน/แร่ธาตุ: {', '.join(supps)}", 0, 'L')
-        has_any_supp = True
-
-    # รายการเกลือแร่ (Electrolytes)
-    if data.get('kcl', 0) > 0 or data.get('k2po4', 0) > 0:
-        pdf.set_x(15)
-        pdf.cell(190, 7, f"• Electrolytes: KCl {data['kcl']} mEq/L, K2PO4 {data['k2po4']} mEq/L", 0, 1)
-        has_any_supp = True
-    
-    if not has_any_supp:
-        pdf.set_x(15)
-        pdf.cell(190, 7, "  - ไม่มีการให้วิตามินหรือเกลือแร่เสริม", 0, 1)
-    
     pdf.ln(2)
+    inds_text = ", ".join(data.get('indications', [])) or "-"
+    en_text = ", ".join(data.get('en_contra', [])) or "-"
+    
+    pdf.set_x(15)
+    pdf.multi_cell(180, 8, f"• TPN Indication: {inds_text}", 0, 'L')
+    pdf.set_x(15)
+    pdf.multi_cell(180, 8, f"• EN Contraindication: {en_text}", 0, 'L')
+    pdf.ln(4)
 
-    # 7. บทสรุปสารอาหารจริง (Actual vs Target)
-    pdf.ln(2)
+    # --- 4. Nutritional Assessment & Refeeding ---
     pdf.set_font(font_main, 'B', 15)
-    pdf.cell(190, 8, "สรุปสารอาหารที่ได้รับจริง (Actual Delivered):", 0, 1)
+    pdf.cell(190, 9, " 3. การประเมินโภชนาการและความเสี่ยง", 0, 1, 'L', True)
     
-    pdf.set_font(font_main, '', 15)
-    pdf.set_x(15) # ขยับเยื้องเข้ามาเล็กน้อยให้สวยงาม
-    pdf.cell(63, 8, f"- พลังงาน: {data['delivered_kcal']:.0f} kcal/day", 0, 0)
-    pdf.cell(63, 8, f"- โปรตีน: {data['delivered_pro']:.1f} g/day", 0, 0)
-    pdf.cell(64, 8, f"- สารน้ำรวม: {data['delivered_vol']:.0f} ml/day", 0, 1)
+    pdf.set_font(font_main, '', 14)
+    pdf.ln(2)
+    pdf.set_x(15)
+    pdf.cell(95, 8, f"Mod.NAF: {data.get('naf_cat', '-')}", 0, 0)
+    pdf.cell(80, 8, f"Severity: {data.get('mal_level', '-')}", 0, 1)
+
+    # --- ส่วนแสดง Refeeding Risk แบบละเอียด ---
+    rf_status = data.get('is_refeeding', "Normal Risk")
+    rf_details = data.get('refeeding_details', []) # ดึง List ของปัจจัยเสี่ยงที่เลือกมา
+    
+    # ตั้งค่าสีแดงเฉพาะกรณี High Risk
+    if rf_status == "High Risk":
+        pdf.set_text_color(200, 0, 0)
     
     pdf.set_x(15)
-    pdf.cell(190, 8, f"- Lipid Infusion Rate: {data['actual_lipid_rate']:.3f} g/kg/hr", 0, 1)
+    pdf.set_font(font_main, 'B', 14)
+    pdf.cell(190, 8, f"ความเสี่ยง Refeeding Syndrome: {rf_status}", 0, 1)
     
-    # แสดงข้อมูลอื่นๆ
+    # แสดงรายละเอียดปัจจัยเสี่ยง (ถ้ามี)
+    if rf_details:
+        pdf.set_font(font_main, '', 13) # ใช้ Font ปกติขนาด 13 สำหรับรายละเอียด
+        # หากต้องการให้สีข้อความรายละเอียดเป็นสีดำปกติ แม้จะเป็น High Risk
+        # pdf.set_text_color(0, 0, 0) 
+        
+        detail_text = ", ".join(rf_details)
+        pdf.set_x(20) # ย่นระยะเข้าไปเพื่อให้ดูเป็นหัวข้อย่อย
+        pdf.multi_cell(175, 7, f"ปัจจัยเสี่ยงที่พบ: {detail_text}", 0, 'L')
+
+    pdf.set_text_color(0, 0, 0)
+    pdf.ln(4)
+    
+    # --- 5. Prescription Table (จัดวางกึ่งกลาง) ---
+    pdf.set_font(font_main, 'B', 15)
+    pdf.cell(190, 9, " 4. แผนการให้สารอาหาร (Prescription)", 0, 1, 'L', True)
+    
+    t_kcal = data.get('target_kcal', 1)
+    t_pro = data.get('target_pro', 1)
+    pdf.set_font(font_main, 'B', 14)
+    pdf.ln(1)
     pdf.set_x(15)
-    pdf.cell(95, 8, f"• สารน้ำรวม (Total Vol): {data['delivered_vol']:.0f} ml/day (Limit: {data.get('fluid_limit', '-')})", 0, 0)
-    pdf.cell(95, 8, f"• Lipid Infusion Rate: {data['actual_lipid_rate']:.3f} g/kg/hr", 0, 1)
-    
-    # --- ส่วนท้ายของรายงาน: ลายเซ็นแพทย์ ---
-    pdf.ln(10) 
-    
-    # เช็คว่าพื้นที่พอพิมพ์ไหม ถ้าเหลือน้อยกว่า 40mm ให้ขึ้นหน้าใหม่
-    if pdf.get_y() > 250:
-        pdf.add_page()
+    pdf.cell(180, 8, f"Target: Energy {t_kcal:.0f} kcal/day | Protein {t_pro:.1f} g/day", 0, 1)
 
     pdf.set_font(font_main, 'B', 13)
-    current_y = pdf.get_y()
+    pdf.set_fill_color(230, 230, 230)
+    pdf.set_x(10)
+    pdf.cell(75, 10, "รายการสารอาหาร", 1, 0, 'C', True)
+    pdf.cell(35, 10, "Rate (ml/hr)", 1, 0, 'C', True)
+    pdf.cell(30, 10, "เวลา (hr)", 1, 0, 'C', True)
+    pdf.cell(50, 10, "ปริมาณรวม (ml)", 1, 1, 'C', True)
     
-    # แพทย์ #1 (ชิดซ้าย)
-    pdf.set_xy(15, current_y)
-    pdf.multi_cell(85, 7, f"ลงชื่อ: {data['physician_1']}\nแพทย์ผู้สั่งการรักษา", 0, 'C')
+    pdf.set_font(font_main, '', 14)
+    pdf.cell(75, 10, f"{data.get('pn_name', '-')}", 1, 0, 'C')
+    pdf.cell(35, 10, f"{data.get('final_rate', 0)}", 1, 0, 'C')
+    pdf.cell(30, 10, f"{data.get('hours', 0)}", 1, 0, 'C')
+    pdf.cell(50, 10, f"{data.get('actual_pn_vol', 0):.0f}", 1, 1, 'C')
     
-    # แพทย์ #2 (ชิดขวาในระยะกระดาษ)
-    pdf.set_xy(110, current_y)
-    pdf.multi_cell(85, 7, f"ลงชื่อ: {data['physician_2']}\nแพทย์ผู้ตรวจสอบ", 0, 'C')
+    if data.get('add_amiparen'):
+        pdf.cell(75, 10, "10% Amiparen", 1, 0, 'C')
+        pdf.cell(35, 10, f"{data.get('final_ami_rate', 0)}", 1, 0, 'C')
+        pdf.cell(30, 10, f"{data.get('hours', 0)}", 1, 0, 'C')
+        pdf.cell(50, 10, f"{data.get('actual_ami_vol', 0):.0f}", 1, 1, 'C')
+    pdf.ln(4)
+
+    # --- 6. Vitamin & Electrolytes ---
+    pdf.set_font(font_main, 'B', 15)
+    pdf.cell(190, 9, " 5. วิตามินและแร่ธาตุเสริม", 0, 1, 'L', True)
+    
+    pdf.set_font(font_main, '', 14)
+    pdf.ln(2)
+    supps = []
+    if data.get('b_complex', 0) > 0: supps.append(f"B-complex {data['b_complex']} vial")
+    if data.get('soluvit'): supps.append("Soluvit 1 vial")
+    if data.get('vitalipid'): supps.append("Vitalipid 1 vial")
+    if data.get('addamel'): supps.append("Addamel 1 vial")
+    
+    supp_text = ", ".join(supps) if supps else "ไม่มี"
+    pdf.set_x(15)
+    pdf.cell(180, 8, f"• Supplements: {supp_text}", 0, 1)
+    pdf.ln(4)
+    
+    # --- 7. Summary Actual Delivered ---
+    pdf.set_font(font_main, 'B', 15)
+    pdf.cell(190, 9, " 6. สรุปสารอาหารที่ได้รับจริง (Actual Delivered)", 0, 1, 'L', True)
+    
+    pdf.set_font(font_main, '', 14)
+    pdf.ln(2)
+    d_kcal = data.get('delivered_kcal', 0)
+    d_pro = data.get('delivered_pro', 0)
+    d_vol = data.get('delivered_vol', 0)
+    perc_kcal = (d_kcal / t_kcal * 100) if t_kcal > 0 else 0
+    perc_pro = (d_pro / t_pro * 100) if t_pro > 0 else 0
+
+    pdf.set_x(15)
+    pdf.cell(90, 8, f"- Energy: {d_kcal:.0f} kcal ({perc_kcal:.0f}%)", 0, 0)
+    pdf.cell(90, 8, f"- Protein: {d_pro:.1f} g ({perc_pro:.0f}%)", 0, 1)
+    pdf.set_x(15)
+    pdf.cell(90, 8, f"- Total Vol: {d_vol:.0f} ml (Limit: {data.get('fluid_limit', '-')})", 0, 0)
+    pdf.cell(90, 8, f"- Lipid Rate: {data.get('actual_lipid_rate', 0):.3f} g/kg/hr", 0, 1)
+
+# --- 8. Signature Section (Fixed at Bottom) ---
+    # พิกัด 260 คือระยะที่เหมาะสมสำหรับท้ายกระดาษ A4 (เหลือขอบล่างประมาณ 2.5 - 3 ซม.)
+    signature_y = 260 
+    
+    # วาดเส้นประสำหรับการเซ็นชื่อ (Optional: ช่วยให้ดูเป็นทางการขึ้น)
+    pdf.set_draw_color(100, 100, 100)
+    pdf.line(25, signature_y, 90, signature_y)   # เส้นฝั่งซ้าย
+    pdf.line(120, signature_y, 185, signature_y) # เส้นฝั่งขวา
+    
+    # ขยับตำแหน่งลงมานิดหน่อยเพื่อพิมพ์ชื่อใต้เส้น
+    pdf.set_y(signature_y + 2) 
+    pdf.set_font(font_main, 'B', 14)
+    
+    p1_name = data.get('physician_1', "").strip() or ".........................................."
+    p2_name = data.get('physician_2', "..........................................")
+
+    # พิมพ์ชื่อและตำแหน่ง (ฝั่งซ้าย)
+    pdf.set_x(15)
+    pdf.multi_cell(85, 7, f"( {p1_name} )\nแพทย์ผู้สั่งการรักษา", 0, 'C')
+    
+    # พิมพ์ชื่อและตำแหน่ง (ฝั่งขวา)
+    # ต้องใช้ set_xy เพื่อดึงแกน Y กลับขึ้นมาที่ระดับเดียวกับฝั่งซ้าย
+    pdf.set_xy(110, signature_y + 2)
+    pdf.multi_cell(85, 7, f"( {p2_name} )\nแพทย์ผู้ตรวจสอบ/ผู้ให้คำปรึกษา", 0, 'C')
 
     return pdf.output(dest='S')
 
@@ -527,60 +510,62 @@ if is_ready:
     if delivered_vol > fluid_limit: st.error(f"⚠️ Volume ({delivered_vol:.0f}ml) > Limit ({fluid_limit}ml)")
 
     # --- 5. REPORT GENERATION ---
-    st.divider()
-    if st.button("📄 Generate PDF Report (A4)"):
+st.divider()
+
+# สร้างปุ่ม Generate
+if st.button("📄 Generate PDF Report (A4)"):
+    # 1. รวบรวมข้อมูล Indications (ย้ายมาไว้รวมกันที่เดียว)
+    inds = []
+    if c1: inds.append("Malnutrition/Risk")
+    if c2: inds.append("Inadequate intake <60%")
+    if c3: inds.append("Stable Hemodynamic")
+    if c4: inds.append("Not End-of-life")
+
+    # 2. เตรียมรายละเอียดความเสี่ยง Refeeding
+    rf_details = []
+    if rf_a1: rf_details.append("BMI < 16")
+    if rf_a2: rf_details.append("Weight loss > 15%")
+    if rf_a3: rf_details.append("Starvation > 10 days")
+    if rf_a4: rf_details.append("Low electrolytes")
+    if rf_b1: rf_details.append("BMI < 18.5")
+    if rf_b2: rf_details.append("Weight loss > 10%")
+    if rf_b3: rf_details.append("Starvation > 5 days")
+    if rf_b4: rf_details.append("Alcohol/Drugs history")
+
+    # 3. จัดเตรียมข้อมูลสำหรับส่งเข้าฟังก์ชัน PDF (ประกาศครั้งเดียวให้ครบ)
+    report_data = {
+        "name": name, "age": age, "ward": ward, "weight": weight, "height": height, "bmi": bmi, "ibw": ibw,
+        "indications": inds, "en_contra": e_list,
+        "naf_score": st.session_state.naf_score_total, "naf_cat": st.session_state.naf_category,
+        "mal_level": mal_level, "is_refeeding": is_refeeding_risk, "refeeding_details": rf_details,
+        "target_kcal": target_kcal, "target_pro": target_pro, "fluid_limit": fluid_limit,
+        "pn_name": selected_pn_name, "final_rate": final_rate, "final_ami_rate": final_ami_rate,
+        "hours": infusion_hours, "actual_pn_vol": actual_pn_vol, "actual_ami_vol": actual_ami_vol,
+        "add_amiparen": add_amiparen, "delivered_kcal": delivered_kcal, "delivered_pro": delivered_pro,
+        "delivered_vol": delivered_vol, "actual_lipid_rate": actual_lipid_rate,
+        "soluvit": add_soluvit, "vitalipid": add_vitalipid, "addamel": add_addamel, "b_complex": b_complex_vials,
+        "kcl": kcl_val, "k2po4": k2po4_val,
+        "physician_1": physician_1 if physician_1 else "(......................................................)",
+        "physician_2": physician_2, 
+    }
+    
+    # 4. เรียกสร้าง PDF และสร้างปุ่มดาวน์โหลด
     pdf_bytes = create_pdf_report(report_data)
-        if pdf_bytes is not None:
-            st.download_button(...)
-        else:
-            st.error("❌ ไม่พบไฟล์ฟอนต์ THSarabunNew.ttf บนเซิร์ฟเวอร์ กรุณาตรวจสอบการอัปโหลดไฟล์")
-        # ทุกบรรทัดด้านล่างนี้ต้องย่อหน้า (Indent) เข้ามาภายใต้ if
-        inds = []
-        if c1: inds.append("Malnutrition/Risk")
-        if c2: inds.append("Inadequate intake <60%")
-        if c3: inds.append("Stable Hemodynamic")
-        if c4: inds.append("Not End-of-life")
+    
+    if pdf_bytes:
+        st.success("✅ สร้างรายงานสำเร็จ! คลิกปุ่มด้านล่างเพื่อดาวน์โหลด")
+        st.download_button(
+            label="💾 Download TPN Report",
+            data=bytes(pdf_bytes), 
+            file_name=f"TPN_Report_{name}.pdf",
+            mime="application/pdf",
+            key="download_report_button_v1"
+        )
+    else:
+        st.error("❌ ไม่พบไฟล์ฟอนต์สำหรับสร้างภาษาไทยใน PDF")
 
-        # เตรียมรายละเอียดความเสี่ยง Refeeding
-        rf_details = []
-        if rf_a1: rf_details.append("BMI < 16")
-        if rf_a2: rf_details.append("Weight loss > 15%")
-        if rf_a3: rf_details.append("Starvation > 10 days")
-        if rf_a4: rf_details.append("Low electrolytes")
-        if rf_b1: rf_details.append("BMI < 18.5")
-        if rf_b2: rf_details.append("Weight loss > 10%")
-        if rf_b3: rf_details.append("Starvation > 5 days")
-        if rf_b4: rf_details.append("Alcohol/Drugs history")
+else:
+    st.warning("⚠️ โปรดประเมิน NAF และยืนยัน Indication ก่อนเริ่ม")
 
-        # จัดเตรียมข้อมูลสำหรับส่งเข้าฟังก์ชัน PDF
-        report_data = {
-            "name": name,"age": age, "ward": ward, "weight": weight, "height": height, "bmi": bmi, "ibw": ibw,
-            "indications": inds, "en_contra": e_list,
-            "naf_score": st.session_state.naf_score_total, "naf_cat": st.session_state.naf_category,
-            "mal_level": mal_level, "is_refeeding": is_refeeding_risk, "refeeding_details": rf_details,
-            "target_kcal": target_kcal, "target_pro": target_pro, "fluid_limit": fluid_limit,
-            "pn_name": selected_pn_name, "final_rate": final_rate, "final_ami_rate": final_ami_rate,
-            "hours": infusion_hours, "actual_pn_vol": actual_pn_vol, "actual_ami_vol": actual_ami_vol,
-            "add_amiparen": add_amiparen, "delivered_kcal": delivered_kcal, "delivered_pro": delivered_pro,
-            "delivered_vol": delivered_vol, "actual_lipid_rate": actual_lipid_rate,
-            "soluvit": add_soluvit, "vitalipid": add_vitalipid, "addamel": add_addamel, "b_complex": b_complex_vials,
-            "kcl": kcl_val, "k2po4": k2po4_val,
-            "physician_1": physician_1 if physician_1 else "(......................................................)",
-            "physician_2": physician_2, 
-        }
-        
-        # เรียกสร้าง PDF และสร้างปุ่มดาวน์โหลด
-        pdf_bytes = create_pdf_report(report_data)
-        if pdf_bytes:
-            st.download_button(
-                label="💾 Download TPN Report",
-                data=bytes(pdf_bytes),
-                file_name=f"TPN_Report_{name}.pdf",
-                mime="application/pdf"
-            )
-
-        else:
-            st.warning("⚠️ โปรดประเมิน NAF และยืนยัน Indication ก่อนเริ่ม")
-
-        st.divider()
-        st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
+st.divider()
+st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
