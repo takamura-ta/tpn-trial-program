@@ -32,7 +32,7 @@ def create_pdf_report(data):
             pdf.add_page()
             pdf.set_font("Arial", 'B', 16)
             pdf.cell(190, 10, "Error: Thai Font not found (.ttf)", 0, 1, 'C')
-			st.write(f"ไฟล์ที่พบในเครื่อง: {os.listdir(current_dir)}")
+		st.write(f"ไฟล์ที่พบในเครื่อง: {os.listdir(current_dir)}")
             return bytes(pdf.output())
 
         # โหลดฟอนต์
@@ -469,6 +469,7 @@ if st.session_state.pdf_output is not None:
         )
     except Exception as e:
         st.error(f"เกิดข้อผิดพลาดในการเตรียมไฟล์ดาวน์โหลด: {e}")
+
 
 
 
