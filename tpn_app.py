@@ -12,6 +12,19 @@ def create_pdf_report(data):
     font_path = os.path.join(current_dir, 'THSarabunNew.ttf')
     font_bold_path = os.path.join(current_dir, 'THSarabunNew_Bold.ttf')
 
+if 'naf_score' not in st.session_state:
+    st.session_state.naf_score = 0
+if 'pdf_output' not in st.session_state:
+    st.session_state.pdf_output = None
+
+# ประกาศตัวแปรรองรับ NameError
+naf_score = st.session_state.naf_score
+name = "-"
+ibw = 0.0
+bmi = 0.0
+pdf_output = st.session_state.pdf_output
+report_data = {}
+	
     # 1. ตรวจสอบไฟล์ฟอนต์ก่อนเป็นอันดับแรก
     if not os.path.exists(font_path) or not os.path.exists(font_bold_path):
         # ถ้าไม่มีฟอนต์ไทย ห้ามใส่ภาษาไทยใน PDF เด็ดขาด ไม่งั้นจะ Error ทันที
@@ -550,6 +563,7 @@ if st.button("📄 Generate PDF Report (A4)"):
     if rf_b4: rf_details.append("Alcohol/Drugs history")
 
     # 3. จัดเตรียมข้อมูลสำหรับส่งเข้าฟังก์ชัน PDF (ประกาศครั้งเดียวให้ครบ)
+if naf_score > 0:
     report_data = {
         "name": name, "age": age, "ward": ward, "weight": weight, "height": height, "bmi": bmi, "ibw": ibw,
         "indications": inds, "en_contra": e_list,
@@ -567,10 +581,6 @@ if st.button("📄 Generate PDF Report (A4)"):
     }
     
 # --- 4. เรียกสร้าง PDF และสร้างปุ่มดาวน์โหลด ---
-    
-    # ตรวจสอบเงื่อนไขการประเมินก่อน (เช่น NAF Score)
-    if naf_score > 0: 
-        # สร้างตัวแปร pdf_output มารับค่าจากฟังก์ชัน
         pdf_output = create_pdf_report(report_data)
         
         # ตรวจสอบว่าฟังก์ชันสร้าง PDF สำเร็จหรือไม่ (ไม่ใช่ None)
@@ -590,6 +600,7 @@ if st.button("📄 Generate PDF Report (A4)"):
 
     st.divider()
     st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
+
 
 
 
