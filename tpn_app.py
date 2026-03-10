@@ -289,23 +289,25 @@ with st.expander("📝 ประเมิน NAF (คลิกที่นี่
 
 # --- ผลสรุปเบื้องต้น & คำแนะนำ ---
 st.divider()
+st.divider()
 c_res1, c_res2, c_res3 = st.columns(3)
 with c_res1: st.metric("BMI", f"{bmi:.1f}")
 with c_res2: st.metric("Ideal BW (kg)", f"{ibw:.1f}")
 with c_res3: st.metric("Mod.NAF Category", st.session_state.naf_category)
 
-nt_score = st.selectbox("NT 2013 Score (Nutrition Triage)", [1, 2, 3, 4])
+# ดึงค่า NAF Category มาใช้งาน
 naf_cat = st.session_state.naf_category
 
-if (bmi < 16 or naf_cat == "C" or nt_score == 4):
+# ปรับ Logic ใหม่: ใช้แค่ BMI และ NAF Category
+if (bmi < 16 or naf_cat == "C"):
     mal_level, sev_color = "Severe", "red"
     rec_text = "แนะนำเริ่มให้อาหารทางหลอดเลือดดำภายใน 3-5 วัน"
-elif (16 <= bmi <= 16.99 or naf_cat == "B" or nt_score == 3):
+elif (16 <= bmi <= 16.99 or naf_cat == "B"):
     mal_level, sev_color = "Moderate", "orange"
     rec_text = "แนะนำเริ่มให้อาหารทางหลอดเลือดดำภายใน 3-5 วัน"
 else:
     mal_level, sev_color = "Normal/Mild", "blue"
-    rec_text = "แนะนำเริ่มให้อาหารทางหลอดเลือดดำหลังวันที่ 7"
+    rec_text = "แนะนำเริ่มให้อาหารทางหลอดเลือดดำหลังวันที่ 7 หากยังทานไม่ได้ตามเป้าหมาย"
 
 st.subheader(f"ระดับความรุนแรง: :{sev_color}[{mal_level} Malnutrition]")
 st.markdown(f"""<div style="padding: 10px; border-radius: 5px; background-color: rgba(0,0,0,0.05); border-left: 5px solid {sev_color};">
@@ -575,4 +577,5 @@ if is_ready:
         st.divider()
 
         st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
+
 
