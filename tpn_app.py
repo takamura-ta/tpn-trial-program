@@ -586,25 +586,30 @@ if naf_score > 0:
     }
     
 # --- 4. เรียกสร้าง PDF และสร้างปุ่มดาวน์โหลด ---
-        pdf_output = create_pdf_report(report_data)
-        
-        # ตรวจสอบว่าฟังก์ชันสร้าง PDF สำเร็จหรือไม่ (ไม่ใช่ None)
-        if pdf_output is not None:
-            st.download_button(
-                label="💾 Download TPN Report (PDF)",
-                data=pdf_output,  # ใช้ชื่อตัวแปร pdf_output ให้ตรงกัน
-                file_name=f"TPN_Report_{name}.pdf",
-                mime="application/pdf",
-                key="download_pdf_btn"
-            )
-        else:
-            st.error("❌ ไม่สามารถสร้างไฟล์ PDF ได้ กรุณาตรวจสอบไฟล์ฟอนต์ .ttf ในระบบ")
+# 1. ต้องมี if หลักอยู่ก่อน (ตรวจสอบว่าเยื้องหน้าเท่ากับบรรทัดด้านบนของมัน)
+if naf_score > 0:
+    # 2. บรรทัด 589: ต้องเยื้องเข้าไป 4 ช่อง (Space 4 ครั้ง) จากคำว่า if
+    pdf_output = create_pdf_report(report_data)
+    
+    # 3. ตรวจสอบว่าฟังก์ชันสร้าง PDF สำเร็จหรือไม่
+    if pdf_output is not None:
+        st.download_button(
+            label="💾 Download TPN Report (PDF)",
+            data=pdf_output, 
+            file_name=f"TPN_Report_{name}.pdf",
+            mime="application/pdf",
+            key="download_pdf_btn"
+        )
     else:
-        # กรณีที่ยังไม่ได้ประเมิน NAF
-        st.warning("⚠️ โปรดประเมิน NAF และยืนยัน Indication ก่อนเริ่มสร้างรายงาน")
+        st.error("❌ ไม่สามารถสร้างไฟล์ PDF ได้ กรุณาตรวจสอบไฟล์ฟอนต์ .ttf ในระบบ")
+else:
+    # else ตัวนี้ต้องอยู่ตรงแนวเดียวกับ if (naf_score > 0)
+    st.warning("⚠️ โปรดประเมิน NAF และยืนยัน Indication ก่อนเริ่มสร้างรายงาน")
 
-    st.divider()
-    st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
+# บรรทัดเหล่านี้ต้องกลับมาอยู่ชิดขอบซ้าย (หรือระดับเดียวกับ if naf_score)
+st.divider()
+st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
+
 
 
 
