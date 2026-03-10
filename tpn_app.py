@@ -294,7 +294,6 @@ with c_res1: st.metric("BMI", f"{bmi:.1f}")
 with c_res2: st.metric("Ideal BW (kg)", f"{ibw:.1f}")
 with c_res3: st.metric("Mod.NAF Category", st.session_state.naf_category)
 
-nt_score = st.selectbox("NT 2013 Score (Nutrition Triage)", [1, 2, 3, 4])
 naf_cat = st.session_state.naf_category
 
 if (bmi < 16 or naf_cat == "C" or nt_score == 4):
@@ -573,4 +572,5 @@ if is_ready:
             st.warning("⚠️ โปรดประเมิน NAF และยืนยัน Indication ก่อนเริ่ม")
 
         st.divider()
+
         st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
