@@ -191,12 +191,12 @@ def create_pdf_report(data):
     pdf.set_xy(110, signature_y + 2)
     pdf.multi_cell(85, 7, f"( {p2_name} )\nแพทย์ผู้ตรวจสอบ/ผู้ให้คำปรึกษา", 0, 'C')
 
-    return pdf.output()
-	try:
-        # fpdf2 จะ return เป็น bytes/bytearray โดยอัตโนมัติ
-        out = pdf.output()
-        return out
+    try:
+        # สำหรับ fpdf2: การเรียก output() โดยไม่ใส่พารามิเตอร์จะคืนค่าเป็น bytes/bytearray
+        pdf_bytes = pdf.output()
+        return pdf_bytes
     except Exception as e:
+        # แสดง Error ใน Console ของ Streamlit เพื่อช่วยในการ Debug
         print(f"PDF Output Error: {e}")
         return None
 
@@ -575,4 +575,5 @@ else:
 
 st.divider()
 st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
+
 
