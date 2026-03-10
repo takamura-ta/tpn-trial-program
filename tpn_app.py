@@ -404,9 +404,9 @@ if is_ready:
     # --- 5. REPORT GENERATION ---
 st.divider()
 
-# สร้างปุ่ม Generate
-if st.button("📄 Generate PDF Report (A4)"):
-    # 1. รวบรวมข้อมูล Indications (ย้ายมาไว้รวมกันที่เดียว)
+# สร้างปุ่มสำหรับจัดเตรียมข้อมูล
+if st.button("📄 Prepare Report & Generate PDF"):
+    # 1. รวบรวมข้อมูล Indications
     inds = []
     if c1: inds.append("Malnutrition/Risk")
     if c2: inds.append("Inadequate intake <60%")
@@ -424,13 +424,13 @@ if st.button("📄 Generate PDF Report (A4)"):
     if rf_b3: rf_details.append("Starvation > 5 days")
     if rf_b4: rf_details.append("Alcohol/Drugs history")
 
-    # 3. จัดเตรียมข้อมูลสำหรับส่งเข้าฟังก์ชัน PDF (ประกาศครั้งเดียวให้ครบ)
-if naf_score > 0:
+    # 3. จัดเตรียมข้อมูล (ใส่ข้อมูลให้ครบถ้วนใน dictionary)
     report_data = {
         "name": name, "age": age, "ward": ward, "weight": weight, "height": height, "bmi": bmi, "ibw": ibw,
         "indications": inds, "en_contra": e_list,
         "naf_score": st.session_state.naf_score_total, "naf_cat": st.session_state.naf_category,
-        "mal_level": mal_level, "is_refeeding": is_refeeding_risk, "refeeding_details": rf_details,
+        "mal_level": mal_level, "is_refeeding": "High Risk" if is_refeeding_risk else "Normal Risk", 
+        "refeeding_details": rf_details,
         "target_kcal": target_kcal, "target_pro": target_pro, "fluid_limit": fluid_limit,
         "pn_name": selected_pn_name, "final_rate": final_rate, "final_ami_rate": final_ami_rate,
         "hours": infusion_hours, "actual_pn_vol": actual_pn_vol, "actual_ami_vol": actual_ami_vol,
@@ -438,34 +438,28 @@ if naf_score > 0:
         "delivered_vol": delivered_vol, "actual_lipid_rate": actual_lipid_rate,
         "soluvit": add_soluvit, "vitalipid": add_vitalipid, "addamel": add_addamel, "b_complex": b_complex_vials,
         "kcl": kcl_val, "k2po4": k2po4_val,
-        "physician_1": physician_1 if physician_1 else "(......................................................)",
+        "physician_1": physician_1 if physician_1 else "....................",
         "physician_2": physician_2, 
     }
-    
-# --- 4. เรียกสร้าง PDF และสร้างปุ่มดาวน์โหลด ---
-# 1. ต้องมี if หลักอยู่ก่อน (ตรวจสอบว่าเยื้องหน้าเท่ากับบรรทัดด้านบนของมัน)
-if naf_score > 0:
-    # 2. บรรทัด 589: ต้องเยื้องเข้าไป 4 ช่อง (Space 4 ครั้ง) จากคำว่า if
-    pdf_output = create_pdf_report(report_data)
-    
-    # 3. ตรวจสอบว่าฟังก์ชันสร้าง PDF สำเร็จหรือไม่
-    if pdf_output is not None:
-        st.download_button(
-            label="💾 Download TPN Report (PDF)",
-            data=pdf_output, 
-            file_name=f"TPN_Report_{name}.pdf",
-            mime="application/pdf",
-            key="download_pdf_btn"
-        )
-    else:
-        st.error("❌ ไม่สามารถสร้างไฟล์ PDF ได้ กรุณาตรวจสอบไฟล์ฟอนต์ .ttf ในระบบ")
-else:
-    # else ตัวนี้ต้องอยู่ตรงแนวเดียวกับ if (naf_score > 0)
-    st.warning("⚠️ โปรดประเมิน NAF และยืนยัน Indication ก่อนเริ่มสร้างรายงาน")
 
-# บรรทัดเหล่านี้ต้องกลับมาอยู่ชิดขอบซ้าย (หรือระดับเดียวกับ if naf_score)
-st.divider()
-st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
+    # 4. สร้าง PDF และเก็บลง Session State เพื่อไม่ให้หายไปเมื่อกด Download
+    pdf_content = create_pdf_report(report_data)
+    if pdf_content:
+        st.session_state.pdf_output = pdf_content
+        st.success("✅ สร้างไฟล์ PDF สำเร็จ! โปรดกดปุ่มดาวน์โหลดด้านล่าง")
+    else:
+        st.error("❌ เกิดข้อผิดพลาดในการสร้าง PDF")
+
+# --- 6. ส่วนแสดงปุ่มดาวน์โหลด (ต้องอยู่นอกปุ่ม Generate เพื่อให้แสดงค้างไว้ได้) ---
+if st.session_state.pdf_output is not None:
+    st.download_button(
+        label="💾 CLICK HERE TO DOWNLOAD PDF REPORT",
+        data=st.session_state.pdf_output,
+        file_name=f"TPN_Report_{name}.pdf",
+        mime="application/pdf",
+        key="download_pdf_final"
+    )
+
 
 
 
