@@ -191,7 +191,14 @@ def create_pdf_report(data):
     pdf.set_xy(110, signature_y + 2)
     pdf.multi_cell(85, 7, f"( {p2_name} )\nแพทย์ผู้ตรวจสอบ/ผู้ให้คำปรึกษา", 0, 'C')
 
-    return pdf.output(dest='S')
+    return pdf.output()
+	try:
+        # fpdf2 จะ return เป็น bytes/bytearray โดยอัตโนมัติ
+        out = pdf.output()
+        return out
+    except Exception as e:
+        print(f"PDF Output Error: {e}")
+        return None
 
 # 1. Setup Theme และหน้าจอ
 st.set_page_config(page_title="Thai TPN Support System", layout="wide")
@@ -555,12 +562,11 @@ if st.button("📄 Generate PDF Report (A4)"):
     if pdf_bytes:
         st.success("✅ สร้างรายงานสำเร็จ! คลิกปุ่มด้านล่างเพื่อดาวน์โหลด")
         st.download_button(
-            label="💾 Download TPN Report",
-            data=bytes(pdf_bytes), 
-            file_name=f"TPN_Report_{name}.pdf",
-            mime="application/pdf",
-            key="download_report_button_v1"
-        )
+        label="💾 Download TPN Report",
+        data=pdf_output, # fpdf2 คืนค่าเป็น bytes อยู่แล้ว
+        file_name=f"TPN_Report_{name}.pdf",
+        mime="application/pdf"
+    )
     else:
         st.error("❌ ไม่พบไฟล์ฟอนต์สำหรับสร้างภาษาไทยใน PDF")
 
@@ -569,3 +575,4 @@ else:
 
 st.divider()
 st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
+
