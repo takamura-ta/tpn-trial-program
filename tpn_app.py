@@ -289,6 +289,7 @@ with st.expander("📝 ประเมิน NAF (คลิกที่นี่
         st.session_state.naf_score_total = total
         st.session_state.naf_category = "A" if total <= 5 else ("B" if total <= 14 else "C")
         st.success(f"ประเมินสำเร็จ! คะแนนโรค: {sc7} | คะแนนรวม: {total}")
+		naf_score = 0
 
 # --- ผลสรุปเบื้องต้น & คำแนะนำ ---
 st.divider()
@@ -590,6 +591,7 @@ if st.button("📄 Generate PDF Report (A4)"):
 
     st.divider()
     st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
+
 
 
 
