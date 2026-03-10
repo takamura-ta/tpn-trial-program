@@ -567,12 +567,12 @@ if st.button("📄 Generate PDF Report (A4)"):
     }
     
     # 4. เรียกสร้าง PDF และสร้างปุ่มดาวน์โหลด
-    pdf_output = create_pdf_report(report_data)
+    pdf_byte = create_pdf_report(report_data)
     
 if pdf_output is not None:
     st.download_button(
         label="💾 Download TPN Report (PDF)",
-        data=pdf_output,  # ชื่อต้องตรงกับบรรทัดบน
+        data=pdf_byte,  # ชื่อต้องตรงกับบรรทัดบน
         file_name=f"TPN_Report_{name}.pdf",
         mime="application/pdf",
         key="download_pdf_btn" # เพิ่ม key เพื่อป้องกันปุ่มตีกันใน Streamlit
@@ -589,6 +589,7 @@ else:
 
 st.divider()
 st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
+
 
 
 
