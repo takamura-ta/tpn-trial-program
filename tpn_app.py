@@ -577,15 +577,16 @@ if pdf_output is not None:
         mime="application/pdf",
         key="download_pdf_btn" # เพิ่ม key เพื่อป้องกันปุ่มตีกันใน Streamlit
     )
-    else:
-        # กรณีสร้าง PDF ไม่สำเร็จ (เช่น หาฟอนต์ไม่เจอ)
-        st.error("❌ ไม่สามารถสร้างไฟล์ PDF ได้ กรุณาตรวจสอบการตั้งค่าฟอนต์")
+else:
+    # กรณีสร้าง PDF ไม่สำเร็จ (เช่น หาฟอนต์ไม่เจอ)
+    st.error("❌ ไม่สามารถสร้างไฟล์ PDF ได้ กรุณาตรวจสอบการตั้งค่าฟอนต์")
 
 else:
     st.warning("⚠️ โปรดประเมิน NAF และยืนยัน Indication ก่อนเริ่ม")
 
 st.divider()
 st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
+
 
 
 
