@@ -26,7 +26,7 @@ pdf_output = st.session_state.pdf_output
 report_data = {}
 	
     # 1. ตรวจสอบไฟล์ฟอนต์ก่อนเป็นอันดับแรก
-    if not os.path.exists(font_path) or not os.path.exists(font_bold_path):
+if not os.path.exists(font_path) or not os.path.exists(font_bold_path):
         # ถ้าไม่มีฟอนต์ไทย ห้ามใส่ภาษาไทยใน PDF เด็ดขาด ไม่งั้นจะ Error ทันที
         pdf.add_page()
         pdf.set_font("Arial", 'B', 16)
@@ -600,6 +600,7 @@ if naf_score > 0:
 
     st.divider()
     st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
+
 
 
 
