@@ -581,11 +581,15 @@ else:
     # กรณีสร้าง PDF ไม่สำเร็จ (เช่น หาฟอนต์ไม่เจอ)
     st.error("❌ ไม่สามารถสร้างไฟล์ PDF ได้ กรุณาตรวจสอบการตั้งค่าฟอนต์")
 
-    else:
-        st.warning("⚠️ โปรดประเมิน NAF และยืนยัน Indication ก่อนเริ่ม")
+if naf_score > 0: # ตัวอย่างเงื่อนไข
+    pdf_output = create_pdf_report(report_data)
+    # ... แสดงปุ่มดาวน์โหลด ...
+else:
+    st.warning("⚠️ โปรดประเมิน NAF และยืนยัน Indication ก่อนเริ่ม")
 
 st.divider()
 st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
+
 
 
 
