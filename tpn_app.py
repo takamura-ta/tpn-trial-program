@@ -566,29 +566,31 @@ if st.button("📄 Generate PDF Report (A4)"):
         "physician_2": physician_2, 
     }
     
-    # 4. เรียกสร้าง PDF และสร้างปุ่มดาวน์โหลด
-    pdf_byte = create_pdf_report(report_data)
+# --- 4. เรียกสร้าง PDF และสร้างปุ่มดาวน์โหลด ---
     
-if pdf_output is not None:
-    st.download_button(
-        label="💾 Download TPN Report (PDF)",
-        data=pdf_byte,  # ชื่อต้องตรงกับบรรทัดบน
-        file_name=f"TPN_Report_{name}.pdf",
-        mime="application/pdf",
-        key="download_pdf_btn" # เพิ่ม key เพื่อป้องกันปุ่มตีกันใน Streamlit
-    )
-else:
-    # กรณีสร้าง PDF ไม่สำเร็จ (เช่น หาฟอนต์ไม่เจอ)
-    st.error("❌ ไม่สามารถสร้างไฟล์ PDF ได้ กรุณาตรวจสอบการตั้งค่าฟอนต์")
+    # ตรวจสอบเงื่อนไขการประเมินก่อน (เช่น NAF Score)
+    if naf_score > 0: 
+        # สร้างตัวแปร pdf_output มารับค่าจากฟังก์ชัน
+        pdf_output = create_pdf_report(report_data)
+        
+        # ตรวจสอบว่าฟังก์ชันสร้าง PDF สำเร็จหรือไม่ (ไม่ใช่ None)
+        if pdf_output is not None:
+            st.download_button(
+                label="💾 Download TPN Report (PDF)",
+                data=pdf_output,  # ใช้ชื่อตัวแปร pdf_output ให้ตรงกัน
+                file_name=f"TPN_Report_{name}.pdf",
+                mime="application/pdf",
+                key="download_pdf_btn"
+            )
+        else:
+            st.error("❌ ไม่สามารถสร้างไฟล์ PDF ได้ กรุณาตรวจสอบไฟล์ฟอนต์ .ttf ในระบบ")
+    else:
+        # กรณีที่ยังไม่ได้ประเมิน NAF
+        st.warning("⚠️ โปรดประเมิน NAF และยืนยัน Indication ก่อนเริ่มสร้างรายงาน")
 
-if naf_score > 0: # ตัวอย่างเงื่อนไข
-    pdf_output = create_pdf_report(report_data)
-    # ... แสดงปุ่มดาวน์โหลด ...
-else:
-    st.warning("⚠️ โปรดประเมิน NAF และยืนยัน Indication ก่อนเริ่ม")
+    st.divider()
+    st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
 
-st.divider()
-st.caption(f"Support Tool: {name} | IBW: {ibw} kg | BMI: {bmi:.1f}")
 
 
 
