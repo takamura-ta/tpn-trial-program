@@ -91,7 +91,7 @@ def create_pdf_report(data):
         rf_details = data.get('refeeding_details', [])
         if rf_details:
             pdf.set_x(20) # ขยับเข้าไปเป็น bullet
-            detail_str = "รายละเอียดความเสี่ยง: " + ", ".join(rf_details)
+            detail_str = "ความเสี่ยง: " + ", ".join(rf_details)
             # ใช้ multi_cell เพื่อให้ตัดบรรทัดอัตโนมัติหากข้อความยาวเกินไป
             pdf.multi_cell(170, 7, detail_str, 0, 'L')
         
@@ -106,7 +106,7 @@ def create_pdf_report(data):
         if en_contra:
             pdf.set_x(15)
             # ใช้ multi_cell เพราะข้อห้าม EN มักจะมีหลายข้อและชื่อยาว
-            pdf.set_text_color(150, 0, 0) # ใช้สีแดงเข้มเพื่อระบุเป็นข้อห้าม/ปัญหา
+            pdf.set_text_color(200, 0, 0) # ใช้สีแดงเข้มเพื่อระบุเป็นข้อห้าม/ปัญหา
             pdf.multi_cell(180, 7, f"ข้อห้ามในการให้ EN (Contraindications): {', '.join(en_contra)}", 0, 'L')
             pdf.set_text_color(0, 0, 0) # กลับเป็นสีดำปกติ
 
@@ -612,3 +612,4 @@ if st.session_state.pdf_output is not None:
         )
     except Exception as e:
         st.error(f"เกิดข้อผิดพลาดในการเตรียมไฟล์ดาวน์โหลด: {e}")
+
