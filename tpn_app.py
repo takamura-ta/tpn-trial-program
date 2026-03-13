@@ -299,7 +299,7 @@ with st.expander("📝 ประเมิน NAF (คลิกที่นี่
         sc6 = st.selectbox("8. ความสามารถในการเข้าถึงอาหาร:", ["0: ปกติ / นั่งๆ นอนๆ", "1: ต้องมีผู้ช่วยบ้าง", "2: ช่วยเหลือตัวเองไม่ได้"])
     
     st.markdown("**9. โรคที่เป็นอยู่ (เลือกได้หลายโรคเพื่อรวมคะแนน)**")
-    diseases_high = st.multiselect("กลุ่มโรค 6 คะแนน:", ["Stroke/CVA", "Severe Pneumonia", "Multiple fracture", "Malignant hematologic", "Critically ill"])
+    diseases_high = st.multiselect("กลุ่มโรค 6 คะแนน:", ["Stroke/CVA", "Severe Pneumonia", "Multiple fracture", "Hematologic malignancy", "Critically ill"])
     diseases_mid = st.multiselect("กลุ่มโรค 3 คะแนน:", ["DM", "CKD-ESRD", "Cirrhosis/Hepatic encephalopathy", "Solid cancer", "Chronic heart failure", "Severe head injury", "Hip fracture", "COPD", ">2º of burn", "Septicemia"])
 
     if st.button("คำนวณและบันทึกคะแนน Mod.NAF"):
@@ -612,4 +612,5 @@ if st.session_state.pdf_output is not None:
         )
     except Exception as e:
         st.error(f"เกิดข้อผิดพลาดในการเตรียมไฟล์ดาวน์โหลด: {e}")
+
 
