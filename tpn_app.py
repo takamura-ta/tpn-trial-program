@@ -65,6 +65,148 @@ def create_pdf_report(data):
         pdf.cell(63, 8, f"IBW: {data.get('ibw', 0):.1f} kg", 0, 0)
         pdf.cell(64, 8, f"BMI: {data.get('bmi', 0):.1f} kg/m2", 0, 1)
 
+        # 2. ผลการประเมินและข้อบ่งชี้
+        pdf.ln(5)
+        pdf.set_font(font_main, 'B', 15)
+        pdf.cell(190, 9, " 2. ผลการประเมินและข้อบ่งชี้", 0, 1, 'L', True)
+        pdf.set_font(font_main, '', 14)
+        pdf.ln(2)
+        
+        pdf.set_x(15)
+        pdf.cell(0, 8, f"ระดับความรุนแรง: {data.get('mal_level', '-')}", 0, 1)
+        
+        pdf.set_x(15)
+        pdf.cell(0, 8, f"คะแนน NAF: {data.get('naf_score', 0)} ({data.get('naf_cat', '-')})", 0, 1)
+        
+        # แสดงระดับความเสี่ยง Refeeding
+        is_high_risk = data.get('is_refeeding') == "High Risk"
+        risk_text = f"ความเสี่ยง Refeeding: {data.get('is_refeeding', '-')}"
+        pdf.set_x(15)
+        if is_high_risk:
+            pdf.set_text_color(200, 0, 0)  # เปลี่ยนสีเป็นสีแดงถ้าเสี่ยงสูง
+        pdf.cell(0, 8, risk_text, 0, 1)
+        pdf.set_text_color(0, 0, 0)    # กลับมาเป็นสีดำปกติ
+
+        # ดึงรายละเอียดที่ถูกเลือกออกมาแสดง
+        rf_details = data.get('refeeding_details', [])
+        if rf_details:
+            pdf.set_x(20) # ขยับเข้าไปเป็น bullet
+            detail_str = "รายละเอียดความเสี่ยง: " + ", ".join(rf_details)
+            # ใช้ multi_cell เพื่อให้ตัดบรรทัดอัตโนมัติหากข้อความยาวเกินไป
+            pdf.multi_cell(170, 7, detail_str, 0, 'L')
+        
+        # แสดงข้อบ่งชี้ PN (Indications) เพิ่มเติมเพื่อให้ครบถ้วน
+        inds = data.get('indications', [])
+        if inds:
+            pdf.set_x(15)
+            pdf.cell(0, 8, f"ข้อบ่งชี้ในการให้ PN: {', '.join(inds)}", 0, 1)
+
+        # แสดง EN Contraindications (ถ้ามี)
+        en_contra = data.get('en_contra', [])
+        if en_contra:
+            pdf.set_x(15)
+            # ใช้ multi_cell เพราะข้อห้าม EN มักจะมีหลายข้อและชื่อยาว
+            pdf.set_text_color(150, 0, 0) # ใช้สีแดงเข้มเพื่อระบุเป็นข้อห้าม/ปัญหา
+            pdf.multi_cell(180, 7, f"ข้อห้ามในการให้ EN (Contraindications): {', '.join(en_contra)}", 0, 'L')
+            pdf.set_text_color(0, 0, 0) # กลับเป็นสีดำปกติ
+
+        # แสดงเป้าหมายสารอาหาร (Nutritional Target Setting)
+        pdf.set_x(15)
+        pdf.set_font(font_main, 'B', 14)
+        pdf.cell(0, 8, "เป้าหมายสารอาหาร (Nutritional Target Setting):", 0, 1)
+        pdf.set_font(font_main, '', 14)
+        
+        # ดึงค่าเป้าหมายจาก data dictionary
+        t_kcal = data.get('target_kcal', 0)
+        t_pro = data.get('target_pro', 0)
+        f_limit = data.get('fluid_limit', 0)
+        
+        pdf.set_x(20)
+        pdf.cell(0, 8, f"• Energy Target: {t_kcal:.0f} kcal/day", 0, 1)
+        pdf.set_x(20)
+        pdf.cell(0, 8, f"• Protein Target: {t_pro:.1f} g/day", 0, 1)
+        pdf.set_x(20)
+        pdf.cell(0, 8, f"• Fluid Limit: {f_limit:.0f} ml/day", 0, 1)
+
+        # 3. แผนการให้สารอาหาร (PN Order)
+        pdf.ln(5)
+        pdf.set_font(font_main, 'B', 15)
+        pdf.cell(190, 9, " 3. รายละเอียดแผนการให้สารอาหาร (PN Order)", 0, 1, 'L', True)
+        pdf.set_font(font_main, '', 14)
+
+        # --- ต้องมีก้อนนี้ก่อนเริ่มวาดตาราง ---
+        # 1. เตรียมข้อมูล Vitamins
+        vits_list = []
+        if data.get('soluvit'): vits_list.append("Soluvit")
+        if data.get('vitalipid'): vits_list.append("Vitalipid")
+        if data.get('addamel'): vits_list.append("Addamel")
+        b_vials = data.get('b_complex', 0)
+        if b_vials > 0: vits_list.append(f"B-complex ({b_vials})")
+        
+        has_vitamins = len(vits_list) > 0
+
+        # 2. เตรียมข้อมูล Electrolytes
+        kcl = data.get('kcl', 0)
+        k2po4 = data.get('k2po4', 0)
+        elec_str = []
+        if kcl > 0: elec_str.append(f"KCl {kcl}")
+        if k2po4 > 0: elec_str.append(f"K2PO4 {k2po4}")
+        
+        # --- เปลี่ยนจากข้อความธรรมดาเป็นรูปแบบตาราง (Table Style) ---
+        pdf.ln(2)
+        pdf.set_x(15)
+        
+        # ตั้งค่าสีหัวตาราง (เขียวอ่อนตามธีมแอป)
+        pdf.set_fill_color(230, 245, 230) 
+        pdf.set_font(font_main, 'B', 13)
+        
+        # ส่วนประกอบตาราง (Header)
+        pdf.cell(95, 8, " รายการ (Item Description)", 1, 0, 'C', True)
+        pdf.cell(85, 8, " รายละเอียดการบริหารยา (Specification)", 1, 1, 'C', True)
+        
+        # คืนค่าฟอนต์ปกติสำหรับเนื้อหา
+        pdf.set_font(font_main, '', 13)
+        
+        # บรรทัดที่ 1: ชนิด PN
+        pdf.set_x(15)
+        pdf.cell(95, 8, f" Main PN: {data.get('pn_name', '-')}", 1, 0, 'L')
+        pdf.cell(85, 8, f" {data.get('final_rate', 0)} ml/hr (Total {data.get('hours', 0)} hrs)", 1, 1, 'L')
+        
+        # บรรทัดที่ 2: Amiparen (ถ้ามี)
+        if data.get('add_amiparen'):
+            pdf.set_x(15)
+            pdf.cell(95, 8, " Supplement: Amiparen 10%", 1, 0, 'L')
+            pdf.cell(85, 8, f" {data.get('final_ami_rate', 0)} ml/hr", 1, 1, 'L')
+            
+        # บรรทัดที่ 3: Vitamins (ถ้ายุบรวมกันจะประหยัดที่มาก)
+        if has_vitamins:
+            v_text = ", ".join(vits_list)
+            pdf.set_x(15)
+            pdf.cell(95, 8, " Vitamins & Trace Elements", 1, 0, 'L')
+            # ใช้พิกัด x,y ช่วยกรณีข้อความยาว (หรือใช้ cell ปกติถ้าสั้น)
+            pdf.cell(85, 8, f" {v_text[:45]}{'...' if len(v_text)>45 else ''}", 1, 1, 'L')
+            
+        # บรรทัดที่ 4: Electrolytes
+        if kcl > 0 or k2po4 > 0:
+            e_text = " / ".join(elec_str)
+            pdf.set_x(15)
+            pdf.cell(95, 8, " Electrolytes Supplement", 1, 0, 'L')
+            pdf.cell(85, 8, f" {e_text}", 1, 1, 'L')
+
+        # เพิ่มเส้นใต้ตารางเล็กน้อย
+        pdf.ln(4)
+
+        # 4. สารอาหารที่ได้รับจริง (Actual Delivered)
+        pdf.ln(5)
+        pdf.set_font(font_main, 'B', 15)
+        pdf.cell(190, 9, " 4. สรุปสารอาหารที่ได้รับจริง (Actual Delivered)", 0, 1, 'L', True)
+        pdf.set_font(font_main, '', 14)
+        pdf.ln(2)
+        pdf.set_x(15)
+        pdf.cell(63, 8, f"Energy: {data.get('delivered_kcal', 0):.0f} kcal", 0, 0)
+        pdf.cell(63, 8, f"Protein: {data.get('delivered_pro', 0):.1f} g", 0, 0)
+        pdf.cell(64, 8, f"Volume: {data.get('delivered_vol', 0):.0f} ml", 0, 1)
+
         # --- ส่วน Signature Section ---
         signature_y = 260 
         pdf.set_y(signature_y)
@@ -84,7 +226,8 @@ def create_pdf_report(data):
         return bytes(pdf_bytes)
 
     except Exception as e:
-        print(f"PDF Error: {e}")
+        # เปลี่ยนจาก print(f"PDF Error: {e}") เป็น st.error ด้านล่าง
+        st.error(f"รายละเอียดข้อผิดพลาดทางเทคนิค: {e}")
         return None
 
 # 1. Setup Theme และหน้าจอ
@@ -469,45 +612,3 @@ if st.session_state.pdf_output is not None:
         )
     except Exception as e:
         st.error(f"เกิดข้อผิดพลาดในการเตรียมไฟล์ดาวน์โหลด: {e}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
