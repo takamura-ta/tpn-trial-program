@@ -62,8 +62,12 @@ def create_pdf_report(data):
         pdf.cell(64, 8, f"หอผู้ป่วย: {data.get('ward', '-')}", 0, 1)
         pdf.set_x(15)
         pdf.cell(63, 8, f"น้ำหนัก: {data.get('weight', 0)} kg", 0, 0)
-        pdf.cell(63, 8, f"IBW: {data.get('ibw', 0):.1f} kg", 0, 0)
+        pdf.cell(63, 8, f"IBW/AdjBW: {data.get('ibw', 0):.1f} / {data.get('adj_bw', 0):.1f} kg", 0, 0) # เพิ่ม AdjBW
         pdf.cell(64, 8, f"BMI: {data.get('bmi', 0):.1f} kg/m2", 0, 1)
+        comorb_list = data.get('comorbidities', [])
+        if comorb_list:
+            pdf.set_x(15)
+            pdf.multi_cell(180, 7, f"ภาวะโรคร่วม: {', '.join(comorb_list)}", 0, 'L')
 
         # 2. ผลการประเมินและข้อบ่งชี้
         pdf.ln(5)
@@ -122,9 +126,10 @@ def create_pdf_report(data):
         f_limit = data.get('fluid_limit', 0)
         
         pdf.set_x(20)
-        pdf.cell(0, 8, f"• Energy Target: {t_kcal:.0f} kcal/day", 0, 1)
+        pdf.cell(0, 8, f"• Energy Target: {data.get('target_kcal', 0):.0f} kcal/day", 0, 1)
         pdf.set_x(20)
-        pdf.cell(0, 8, f"• Protein Target: {t_pro:.1f} g/day", 0, 1)
+
+        pdf.cell(0, 8, f"• Protein Target: {data.get('pro_display', '-')}", 0, 1)
         pdf.set_x(20)
         pdf.cell(0, 8, f"• Fluid Limit: {f_limit:.0f} ml/day", 0, 1)
 
@@ -169,7 +174,7 @@ def create_pdf_report(data):
         
         # บรรทัดที่ 1: ชนิด PN
         pdf.set_x(15)
-        pdf.cell(95, 8, f" Main PN: {data.get('pn_name', '-')}", 1, 0, 'L')
+        pdf.cell(95, 8, f" PN: {data.get('pn_name', '-')}", 1, 0, 'L')
         pdf.cell(85, 8, f" {data.get('final_rate', 0)} ml/hr (Total {data.get('hours', 0)} hrs)", 1, 1, 'L')
         
         # บรรทัดที่ 2: Amiparen (ถ้ามี)
@@ -207,7 +212,7 @@ def create_pdf_report(data):
         pdf.cell(63, 8, f"Protein: {data.get('delivered_pro', 0):.1f} g", 0, 0)
         pdf.cell(64, 8, f"Volume: {data.get('delivered_vol', 0):.0f} ml", 0, 1)
 
-        # --- ส่วน Signature Section ---
+        # 6. ส่วน Signature Section
         signature_y = 260 
         pdf.set_y(signature_y)
         pdf.set_font(font_main, 'B', 14)
@@ -276,9 +281,44 @@ st.sidebar.header("2. Supplement data")
 route = st.sidebar.selectbox("Access Route", ["Peripheral Line", "Central Line"])
 fluid_limit = st.sidebar.number_input("Fluid Limit (ml/day)", value=2500)
 
+st.sidebar.divider()
+st.sidebar.header("3. Clinical Condition")
+comorbidities = st.sidebar.multiselect(
+    "ภาวะโรคร่วม (Diseases & Co-morbidities):",
+    options=[
+        "Acute kidney injury (AKI)",
+        "Cancer",
+        "Cirrhosis",
+        "Intermittent hemodialysis",
+        "CRRT",
+        "Peritoneal dialysis (PD)",
+        "Infected PD",
+        "Burn",
+        "Traumatic brain injury (TBI)",
+        "Protein Losing Enteropathy (PLE)"
+    ]
+)
+
 # --- BASELINE MATH ---
-ibw = (height - 100) if gender == "ชาย" else (height - 105)
+if gender == "ชาย":
+    ibw = (height - 105) * 0.9 # สูตร IBW มาตรฐาน (หรือใช้ค่าที่คุณต้องการ)
+else:
+    ibw = (height - 100) * 0.9
+
+# 2. Body Mass Index (BMI)
 bmi = weight / ((height/100)**2)
+
+# 3. Adjusted Body Weight (AdjBW)
+# สูตร: Adjusted BW = Ideal BW + 0.33 * (Actual BW - Ideal BW)
+adj_bw = ibw + 0.33 * (weight - ibw)
+
+rf_m1 = rf_m2 = rf_m3 = rf_m4 = False
+rf_min1 = rf_min2 = rf_min3 = rf_min4 = False
+rf_vh1 = False
+refeed_level = "No Risk"
+is_refeeding_risk = False
+target_kcal = 0.0 
+pro_display = "-"
 
 # --- 1. MODIFIED NAF ASSESSMENT ---
 st.header("1. Nutritional Assessment (Modified NAF)")
@@ -311,12 +351,11 @@ with st.expander("📝 ประเมิน NAF (คลิกที่นี่
         st.success(f"ประเมินสำเร็จ! คะแนนโรค: {sc7} | คะแนนรวม: {total}")
 
 # --- ผลสรุปเบื้องต้น & คำแนะนำ ---
-st.divider()
-st.divider()
-c_res1, c_res2, c_res3 = st.columns(3)
+c_res1, c_res2, c_res3, c_res4 = st.columns(4)
 with c_res1: st.metric("BMI", f"{bmi:.1f}")
 with c_res2: st.metric("Ideal BW (kg)", f"{ibw:.1f}")
-with c_res3: st.metric("Mod.NAF Category", st.session_state.naf_category)
+with c_res3: st.metric("Adj. BW (kg)", f"{adj_bw:.1f}")
+with c_res4: st.metric("Mod.NAF Category", st.session_state.naf_category)
 
 # ดึงค่า NAF Category มาใช้งาน
 naf_cat = st.session_state.naf_category
@@ -324,28 +363,28 @@ naf_cat = st.session_state.naf_category
 # ปรับ Logic ใหม่: ใช้แค่ BMI และ NAF Category
 if (bmi < 16 or naf_cat == "C"):
     mal_level, sev_color = "Severe", "red"
-    rec_text = "แนะนำเริ่มให้อาหารทางหลอดเลือดดำภายใน 3-5 วัน"
+    rec_text = "หากไม่สามารถให้ EN ได้ แนะนำเริ่มให้อาหารทางหลอดเลือดดำทันที"
 elif (16 <= bmi <= 16.99 or naf_cat == "B"):
     mal_level, sev_color = "Moderate", "orange"
-    rec_text = "แนะนำเริ่มให้อาหารทางหลอดเลือดดำภายใน 3-5 วัน"
+    rec_text = "หากไม่สามารถให้ EN ได้ แนะนำเริ่มให้อาหารทางหลอดเลือดดำภายใน 3-5 วัน"
 else:
     mal_level, sev_color = "Normal/Mild", "blue"
-    rec_text = "แนะนำเริ่มให้อาหารทางหลอดเลือดดำหลังวันที่ 7 หากยังทานไม่ได้ตามเป้าหมาย"
+    rec_text = "หากไม่สามารถให้ EN ที่เพียงพอหลังวันที่ 7 แนะนำเริ่มให้อาหารทางหลอดเลือดดำ"
 
 st.subheader(f"ระดับความรุนแรง: :{sev_color}[{mal_level} Malnutrition]")
 st.markdown(f"""<div style="padding: 10px; border-radius: 5px; background-color: rgba(0,0,0,0.05); border-left: 5px solid {sev_color};">
     <p style="margin:0; font-weight:bold; color:{sev_color};">📌 คำแนะนำทางคลินิก:</p><p style="margin:0;">{rec_text}</p></div>""", unsafe_allow_html=True)
+st.divider()
 
 # --- 2. INDICATION ---
 st.header("2. Indication for PN")
 with st.expander("ตรวจสอบข้อบ่งชี้", expanded=True):
     c1 = st.checkbox("ทุพโภชนาการ/เสี่ยงระดับปานกลางขึ้นไป")
     c2 = st.checkbox("ได้รับอาหาร < 60% ของเป้าหมาย")
-    c3 = st.checkbox("Hemodynamically Stable")
-    c4 = st.checkbox("ไม่ใช่ระยะสุดท้าย")
-    e_list = st.multiselect("EN Contraindications:", ["Mechanical Obstruction", "Impaired Absorption", "Severe Ileus", "Bowel Rest", "Abdominal Compartment Syndrome", "ไม่สามารถใส่สายให้อาหารเข้าทางเดินอาหารได้"])
+    c3 = st.checkbox("ไม่ใช่ระยะสุดท้าย")
+    e_list = st.multiselect("EN Contraindications:", ["Hemodynamic instability (Shock index(HR/SBP)>1, Vasopressor >0.3-0.5 mcg/kg/min, MAP <50 mmHg)", "Mechanical Obstruction", "Impaired Absorption", "Severe Ileus", "Bowel Rest", "Abdominal Compartment Syndrome", "ไม่สามารถใส่สายให้อาหารเข้าทางเดินอาหารได้"])
 
-is_ready = all([c1, c2, c3, c4]) and len(e_list) > 0
+is_ready = all([c1, c2, c3]) and len(e_list) > 0
 
 # --- 3. TARGET & REFEEDING & CALCULATOR ---
 if is_ready:
@@ -360,71 +399,213 @@ if is_ready:
         else: # ICU
             target_kcal = weight * 22.5 if bmi < 30 else (weight * 12.5 if bmi <= 50 else ibw * 23.5)
         
-        target_pro = weight * 1.35 if bmi < 30 else (ibw * 2.0 if bmi <= 40 else ibw * 2.25)
+        calc_bw = weight if bmi < 30 else adj_bw
+        # กำหนดช่วงโปรตีนเริ่มต้น (Baseline)
+        low_ratio, high_ratio = 1.2, 1.5 
+        
+        # ปรับค่า Ratio ตามโรคที่เลือก (Multi-select)
+        if "Acute kidney injury (AKI)" in comorbidities:
+            low_ratio, high_ratio = 1.0, 1.2
+        if any(x in comorbidities for x in ["Cirrhosis", "Cancer", "Intermittent hemodialysis"]):
+            low_ratio, high_ratio = 1.2, 1.5
+        if "CRRT" in comorbidities:
+            low_ratio, high_ratio = 1.5, 1.7
+        if "Burn" in comorbidities:
+            low_ratio, high_ratio = 1.2, 2.0
+        if "Traumatic brain injury (TBI)" in comorbidities:
+            low_ratio, high_ratio = 1.5, 2.5
+        if "Protein Losing Enteropathy (PLE)" in comorbidities:
+            low_ratio, high_ratio = 3.0, 3.0 # ค่าเดียว
+
+        # คำนวณเป็นค่า Range
+        p_low = calc_bw * low_ratio
+        p_high = calc_bw * high_ratio
+        
+        # จัดรูปแบบการแสดงผล (ถ้าค่าเท่ากันให้โชว์เลขเดียว)
+        if p_low == p_high:
+            pro_display = f"{p_low:.1f} g/day"
+            target_pro = p_low # ใช้ค่านี้คำนวณต่อ
+        else:
+            pro_display = f"{p_low:.1f} - {p_high:.1f} g/day"
+            target_pro = p_high # ใช้ค่า Max ในการตั้งเป็นเป้าหมายในเครื่องมือคำนวณ
+            
+        st.session_state.pro_display = pro_display # เก็บไว้โชว์ใน PDF
+
     else:
         col_m1, col_m2 = st.columns(2)
         target_kcal = col_m1.number_input("Energy (kcal/day):", value=2000.0, step=50.0)
         target_pro = col_m2.number_input("Protein (g/day):", value=80.0, step=5.0)
 
-    # --- 3.1 REFEEDING RISK ASSESSMENT ---
-    st.subheader("3.1 Refeeding Syndrome Risk Assessment")
-    with st.expander("🔍 แบบทดสอบความเสี่ยงภาวะ Refeeding syndrome (NICE Criteria)", expanded=True):
+# --- 3.1 REFEEDING RISK ASSESSMENT (Latest Update) ---
+    st.subheader("Refeeding Syndrome Risk Assessment")
+    with st.expander("🔍 แบบทดสอบความเสี่ยงภาวะ Refeeding syndrome", expanded=True):
         col_rf1, col_rf2 = st.columns(2)
+        
         with col_rf1:
-            rf_a1 = st.checkbox("BMI < 16 kg/m²", value=(bmi < 16))
-            rf_a2 = st.checkbox("น้ำหนักลดโดยไม่ตั้งใจ > 15% ใน 3-6 เดือน")
-            rf_a3 = st.checkbox("กินอาหารน้อยมาก/ไม่ได้เลย > 10 วัน")
-            rf_a4 = st.checkbox("K, PO4 หรือ Mg ในเลือดต่ำก่อนเริ่ม")
+            st.markdown("**[Major Criteria]**")
+            rf_m1 = st.checkbox("BMI < 16.5 kg/m²", value=(bmi < 16.5))
+            rf_m2 = st.checkbox("น้ำหนักลดโดยไม่ตั้งใจ > 15% ใน 3-6 เดือน")
+            rf_m3 = st.checkbox("กินอาหารน้อยมาก/ไม่ได้เลย > 10 วัน")
+            rf_m4 = st.checkbox("K, PO4 หรือ Mg ในเลือดต่ำก่อนเริ่ม")
+
         with col_rf2:
-            rf_b1 = st.checkbox("BMI < 18.5 kg/m²", value=(16 <= bmi < 18.5))
-            rf_b2 = st.checkbox("น้ำหนักลดโดยไม่ตั้งใจ > 10% ใน 3-6 เดือน")
-            rf_b3 = st.checkbox("กินอาหารน้อยมาก/ไม่ได้เลย > 5 วัน")
-            rf_b4 = st.checkbox("ประวัติ Alcohol abuse / ยา Insulin, Chemo, Diuretics")
+            st.markdown("**[Minor Criteria]**")
+            rf_min1 = st.checkbox("BMI < 18.5 kg/m²", value=(16.5 <= bmi < 18.5))
+            rf_min2 = st.checkbox("น้ำหนักลดโดยไม่ตั้งใจ > 10% ใน 3-6 เดือน")
+            rf_min3 = st.checkbox("กินอาหารน้อยมาก/ไม่ได้เลย > 5 วัน")
+            rf_min4 = st.checkbox("ประวัติ Alcohol abuse / Insulin / Chemo / Diuretics")
 
-        is_refeeding_risk = (sum([rf_a1, rf_a2, rf_a3, rf_a4]) >= 1) or (sum([rf_b1, rf_b2, rf_b3, rf_b4]) >= 2)
+        st.markdown("**[Very High Risk Criteria]**")
+        rf_vh1 = st.checkbox("BMI < 14 kg/m² หรือ น้ำหนักลด > 20% หรือ Starvation > 15 วัน")
 
-    if is_refeeding_risk:
-        refeeding_kcal = weight * 10
-        st.warning("⚠️ High Risk of Refeeding Syndrome")
+        # --- Logic การตัดสินระดับความเสี่ยง ---
+        major_count = sum([rf_m1, rf_m2, rf_m3, rf_m4])
+        minor_count = sum([rf_min1, rf_min2, rf_min3, rf_min4])
+
+        if rf_vh1:
+            refeed_level = "Very High Risk"
+            start_kcal_rate = 5
+        elif major_count >= 1 or minor_count >= 2:
+            refeed_level = "High Risk"
+            start_kcal_rate = 10
+        elif minor_count == 1:
+            refeed_level = "Intermediate Risk"
+            start_kcal_rate = 15
+        else:
+            refeed_level = "No Risk"
+            start_kcal_rate = 25
+
+    # --- การจัดการตามระดับความเสี่ยง ---
+    if refeed_level != "No Risk":
+        refeeding_kcal = weight * start_kcal_rate
+        color_map = {"Very High Risk": "#8b0000", "High Risk": "#ff4b4b", "Intermediate Risk": "#ffa500"}
+        current_color = color_map.get(refeed_level, "#2e7d32")
         
-        # 1. Hypocaloric Info Box
-        st.markdown(f"""<div style="padding:15px; border-radius:10px; background-color:rgba(255,75,75,0.1); border:2px solid #ff4b4b; margin-bottom: 10px;">
-            <h4 style='margin:0; color:#ff4b4b;'>คำแนะนำที่ 1: Hypocaloric Nutrition</h4>
-            <p>• <b>พลังงานเริ่มต้น:</b> แนะนำ {refeeding_kcal:.0f} kcal/day (10 kcal/kg/day)</p>
-            <p>• <b>การปรับเพิ่ม:</b> ค่อยๆ titrate จนได้เป้าหมาย ({target_kcal:.0f} kcal) ใน 7 วัน</p></div>""", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div style="padding:15px; border-radius:10px; background-color:rgba(255,0,0,0.05); border:2px solid {current_color};">
+            <h4 style='margin:0; color:{current_color};'>⚠️ ระดับความเสี่ยง: {refeed_level}</h4>
+            <p>• <b>พลังงานเริ่มต้น:</b> แนะนำ {refeeding_kcal:.0f} kcal/day ({start_kcal_rate} kcal/kg)</p>
+            <p>• <b>ก่อนเริ่ม PN:</b> Correct electrolyte imbalance, ตรวจติดตามค่า Electrolyte  3 วันแรก และทุก 2-3 วัน, Thiamine 200-300 mg/day IV, Vitamin BCO</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-        # 2. Lead-in B-fluid Recommendation
-        b_fluid_vol_needed = refeeding_kcal / 0.42
-        b_fluid_rate_int = round(b_fluid_vol_needed / 24) # ปรับเป็นจำนวนเต็ม
+# --- 3.2 CALORIE TITRATION PLAN (ICU 7-Day Policy & Refeeding) ---
+    if refeed_level != "No Risk":
+        st.subheader("แผนการปรับเพิ่มพลังงาน (CALORIE TITRATION PLAN)")
         
-        st.markdown(f"""<div style="padding:15px; border-radius:10px; background-color:rgba(33, 150, 243, 0.1); border:2px solid #2196f3; margin-bottom: 25px;">
-            <h4 style='margin:0; color:#2196f3;'>คำแนะนำที่ 2: Lead-in Parenteral Nutrition</h4>
-            <p>• <b>Fluid Type:</b> แนะนำ <b>B-fluid 1,000 ml</b> (Glucose 75g, AA 30g, 420 kcal)</p>
-            <p>• <b>Volume Needed:</b> {b_fluid_vol_needed:.0f} ml (เพื่อให้ได้ {refeeding_kcal:.0f} kcal)</p>
-            <p style='font-size:18px;'>• <b>Infusion Rate: <span style='color:#2196f3;'>{b_fluid_rate_int} ml/hr</span></b> (continuous 24 hrs)</p>
-            <p style='font-size:0.85em; color:gray;'>*หมายเหตุ: ปรับเป็นจำนวนเต็มตามเป้าหมาย Hypocaloric 10 kcal/kg/day</p></div>""", unsafe_allow_html=True)
+        # 1. เช็คเงื่อนไข ICU Admission Day (เพิ่มตัวเลือกสำหรับ ICU)
+        limit_70_permissive = False
+        if location == "ICU":
+            is_early_icu = st.checkbox("ICU Admission Day ≤ 7 วัน (ICU Early Phase)", value=True)
+            if is_early_icu:
+                limit_70_permissive = True
+                st.info("ℹ️ ICU Early Phase: จำกัดพลังงานสูงสุดไม่เกิน 70% ของ Energy Goal")
 
-        if st.checkbox(f"ใช้ค่า Hypocaloric ({refeeding_kcal:.0f} kcal) ในการคำนวณวันนี้", value=True):
-            target_kcal = refeeding_kcal
+        # 2. เลือกน้ำหนักที่จะใช้คำนวณ
+        calc_bw_ref = weight if bmi < 30 else adj_bw
 
-    st.markdown(f"""<div class="target-box"><h4 style='margin:0; color:#2196f3;'>🎯 Final Targets</h4>
-        <p style='margin:5px 0 0 0;'><b>Energy:</b> {target_kcal:.0f} kcal/day | <b>Protein:</b> {target_pro:.1f} g/day</p></div>""", unsafe_allow_html=True)
+        # 3. กำหนดแผนตามระดับความเสี่ยง
+        if refeed_level == "Very High Risk":
+            steps = ["Step 1 (Day 1-3)", "Step 2 (Day 4-6)", "Step 3 (Day 7-9)", "Step 4 (Day 10+)"]
+            ranges = ["5 - 10", "10 - 20", "20 - 30", "30 - 35"]
+        elif refeed_level == "High Risk":
+            steps = ["Step 1 (Day 1-3)", "Step 2 (Day 4-5)", "Step 3 (Day 6+)"]
+            ranges = ["10 - 15", "15 - 25", "30 - 35"]
+        else: # Intermediate Risk
+            steps = ["Step 1 (Day 1-3)", "Step 2 (Day 4)", "Step 3 (Day 5+)"]
+            ranges = ["15 - 25", "30", "30 - 35"]
+
+        titration_summary = []
+        for s, r_text in zip(steps, ranges):
+            # แยกค่า Low/High จาก range text
+            low_val = float(r_text.split(' - ')[0]) if ' - ' in r_text else float(r_text)
+            high_val = float(r_text.split(' - ')[1]) if ' - ' in r_text else float(r_text)
+            
+            # --- Logic การปรับลด 70% สำหรับ ICU Early Phase ---
+            if limit_70_permissive:
+                low_val = low_val * 0.7
+                high_val = high_val * 0.7
+            
+            # สร้างข้อความแสดงผลในตาราง
+            if low_val == high_val:
+                energy_range_str = f"{low_val * calc_bw_ref:.0f}"
+                kcal_kg_str = f"{low_val:.1f}"
+            else:
+                energy_range_str = f"{low_val * calc_bw_ref:.0f} - {high_val * calc_bw_ref:.0f}"
+                kcal_kg_str = f"{low_val:.1f} - {high_val:.1f}"
+
+            titration_summary.append({
+                "ลำดับขั้นตอน": s,
+                "Target (kcal/kg)": f"{kcal_kg_str} kcal/kg",
+                "Target Energy (kcal/day)": energy_range_str
+            })
+
+        # แสดงผลตาราง
+        st.dataframe(pd.DataFrame(titration_summary), hide_index=True, use_container_width=True)
+        st.session_state.titration_data = titration_summary
+
+        # ปุ่มเลือกใช้ค่า Step 1 สำหรับวันนี้
+        step1_low = float(titration_summary[0]["Target Energy (kcal/day)"].split(' - ')[0]) if ' - ' in titration_summary[0]["Target Energy (kcal/day)"] else float(titration_summary[0]["Target Energy (kcal/day)"])
+        if st.checkbox(f"ใช้พลังงานตั้งต้น Step 1 ({step1_low:.0f} kcal) สำหรับวันนี้", value=True):
+            target_kcal = step1_low
+
+# --- การแสดงผล Final Targets (เพิ่มตัวเลือก 70% สำหรับ ICU) ---
+    # 1. เตรียมค่าพื้นฐาน
+    calc_bw_energy = weight if bmi < 30 else adj_bw
+    e_low = calc_bw_energy * 25
+    e_high = calc_bw_energy * 30
+    
+    # 2. ตรวจสอบเงื่อนไข ICU และการเลือกสัดส่วนพลังงาน
+    use_70_percent = False
+    if location == "ICU" and refeed_level == "No Risk":
+        # แสดงตัวเลือกเฉพาะใน ICU และไม่มีความเสี่ยง Refeeding (เพราะ Refeeding จะถูกบังคับ Hypocaloric อยู่แล้ว)
+        use_70_percent = st.checkbox("Use 70% Energy Target (ICU Permissive Underfeeding)", value=True)
+
+    # 3. จัดการการแสดงผล Energy Display
+    if refeed_level != "No Risk":
+        energy_display = f"{target_kcal:.0f} kcal/day (Hypocaloric Goal)"
+    else:
+        if use_70_percent:
+            e_low, e_high = e_low * 0.7, e_high * 0.7
+            energy_display = f"{e_low:.0f} - {e_high:.0f} kcal/day (70% Target)"
+        else:
+            energy_display = f"{e_low:.0f} - {e_high:.0f} kcal/day"
+            
+        # อัปเดตค่า target_kcal (ค่าสูงสุดของช่วง) เพื่อใช้คำนวณในส่วนถัดไป
+        target_kcal = e_high
+
+    # 4. แสดงผลด้วย Markdown
+    st.markdown(f"""
+        <div class="target-box">
+            <h4 style='margin:0; color:#2196f3;'>🎯 Final Targets</h4>
+            <p style='margin:5px 0 0 0;'>
+                <b>Energy goal:</b> {energy_display} | 
+                <b>Protein goal:</b> {st.session_state.get('pro_display', '-')}
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
 
     # --- PN Database & Selection ---
     df_bags = pd.DataFrame([
-        {"Name": "B-fluid", "Type": "Peripheral", "Volume": 1000, "Kcal": 480, "Protein": 30, "Lipid": 0},
-	{"Name": "Oliclinamel N4-1500", "Type": "Peripheral", "Volume": 1500, "Kcal": 910, "Protein": 33, "Lipid": 30},
-        {"Name": "Oliclinamel N4-2000", "Type": "Peripheral", "Volume": 2000, "Kcal": 1215, "Protein": 44, "Lipid": 40},
-        {"Name": "Oliclinamel N7-1000", "Type": "Central", "Volume": 1000, "Kcal": 1200, "Protein": 40, "Lipid": 40},
-        {"Name": "Oliclinamel N7-1500", "Type": "Central", "Volume": 1500, "Kcal": 1800, "Protein": 60, "Lipid": 60},
-        {"Name": "Oliclinamel N7-2000", "Type": "Central", "Volume": 2000, "Kcal": 2400, "Protein": 80, "Lipid": 80},
-        {"Name": "SmofKabiven Peri-1500", "Type": "Peripheral", "Volume": 1500, "Kcal": 1100, "Protein": 45, "Lipid": 46},
-        {"Name": "SmofKabiven Peri-1900", "Type": "Peripheral", "Volume": 1904, "Kcal": 1400, "Protein": 57, "Lipid": 60},
-        {"Name": "SmofKabiven Central-1000", "Type": "Central", "Volume": 1012, "Kcal": 1100, "Protein": 51, "Lipid": 38},
-        {"Name": "SmofKabiven Central-1500", "Type": "Central", "Volume": 1477, "Kcal": 1600, "Protein": 75, "Lipid": 56},
-        {"Name": "SmofKabiven Central-2000", "Type": "Central", "Volume": 1970, "Kcal": 2200, "Protein": 100, "Lipid": 75}, 
-        {"Name": "Nutriflex Lipid Peri-1250", "Type": "Peripheral", "Volume": 1250, "Kcal": 955, "Protein": 40, "Lipid": 50},
-        {"Name": "Nutriflex VR-1250", "Type": "Central", "Volume": 1250, "Kcal": 1475, "Protein": 72, "Lipid": 50}
+        # --- Peripheral Line Bags ---
+        {"Name": "B-fluid", "Type": "Peripheral", "Volume": 1000, "Kcal": 480, "Protein": 30, "Lipid": 0, "Glucose": 75},
+        {"Name": "Oliclinamel N4-1500", "Type": "Peripheral", "Volume": 1500, "Kcal": 910, "Protein": 33, "Lipid": 30, "Glucose": 120},
+        {"Name": "Oliclinamel N4-2000", "Type": "Peripheral", "Volume": 2000, "Kcal": 1215, "Protein": 44, "Lipid": 40, "Glucose": 160},
+        {"Name": "SmofKabiven Peri-1448", "Type": "Peripheral", "Volume": 1448, "Kcal": 1000, "Protein": 46, "Lipid": 41, "Glucose": 103},
+        {"Name": "SmofKabiven Peri-1904", "Type": "Peripheral", "Volume": 1904, "Kcal": 1300, "Protein": 60, "Lipid": 54, "Glucose": 135},
+        {"Name": "Nutriflex Lipid Peri-1250", "Type": "Peripheral", "Volume": 1250, "Kcal": 955, "Protein": 40, "Lipid": 50, "Glucose": 80},
+        {"Name": "Nutriflex Lipid Peri-1875", "Type": "Peripheral", "Volume": 1875, "Kcal": 1435, "Protein": 60, "Lipid": 75, "Glucose": 120},
+
+        # --- Central Line Bags ---
+        {"Name": "50% DW 500 ml", "Type": "Central", "Volume": 500, "Kcal": 850, "Protein": 0, "Lipid": 0, "Glucose": 250},
+        {"Name": "Oliclinamel N7-1000", "Type": "Central", "Volume": 1000, "Kcal": 1200, "Protein": 40, "Lipid": 40, "Glucose": 160},
+        {"Name": "Oliclinamel N7-1500", "Type": "Central", "Volume": 1500, "Kcal": 1800, "Protein": 60, "Lipid": 60, "Glucose": 240},
+        {"Name": "Oliclinamel N7-2000", "Type": "Central", "Volume": 2000, "Kcal": 2400, "Protein": 80, "Lipid": 80, "Glucose": 320},
+        {"Name": "SmofKabiven Central-986", "Type": "Central", "Volume": 986, "Kcal": 1100, "Protein": 50, "Lipid": 38, "Glucose": 125},
+        {"Name": "SmofKabiven Central-1477", "Type": "Central", "Volume": 1477, "Kcal": 1600, "Protein": 75, "Lipid": 56, "Glucose": 187},
+        {"Name": "SmofKabiven Central-1970", "Type": "Central", "Volume": 1970, "Kcal": 2200, "Protein": 100, "Lipid": 75, "Glucose": 250}, 
+        {"Name": "Nutriflex Lipid VR-625", "Type": "Central", "Volume": 625, "Kcal": 740, "Protein": 36, "Lipid": 25, "Glucose": 90},
+        {"Name": "Nutriflex Lipid VR-1250", "Type": "Central", "Volume": 1250, "Kcal": 1475, "Protein": 72, "Lipid": 50, "Glucose": 180},
     ])
 
     available_bags = df_bags[(route == "Central Line") | (df_bags['Type'] == "Peripheral")]
@@ -466,6 +647,15 @@ if is_ready:
     delivered_pro = (actual_pn_vol * pro_per_ml) + (actual_ami_vol * 0.1)
     delivered_vol = actual_pn_vol + actual_ami_vol
     delivered_lipid = (actual_pn_vol * lipid_per_ml)
+    # GIR ---
+    # 1. คำนวณ Glucose รวม (g) และ GIR (mg/kg/min)
+    # สูตร GIR: (g Glucose * 1000) / (น้ำหนัก * นาทีที่ให้)
+    delivered_cho = (actual_pn_vol * (pn_info['Glucose'] / pn_info['Volume']))
+    current_gir = (delivered_cho * 1000) / (weight * infusion_hours * 60)
+    current_gm_kg_day = delivered_cho / weight
+    
+    # 2. กำหนดเกณฑ์ Limit (ICU: 5, General: 7 mg/kg/min)
+    max_gir = 5.0 if location == "ICU" else 7.0
 
 # --- 4. VITAMIN & TRACE ELEMENTS ---
     is_central_line = (route == "Central Line")
@@ -509,7 +699,7 @@ if is_ready:
             k2po4_val = st.number_input("K2PO4 (mEq/L):", min_value=0.0, step=1.0, value=0.0)
     else:
         kcl_val = k2po4_val = 0.0
-        st.info("ℹ️ ส่วนประกอบ KCl และ K2PO4 จะเปิดให้ระบุเมื่อเลือก Central Line")
+        st.info("ℹ️ ส่วนประกอบ KCl และ K2PO4 จะเปิดให้ add ใน PN เมื่อเลือก Central Line")
 
 # --- 5. PHYSICIAN SIGNATURE ---
     st.header("5. Physician Signature")
@@ -538,11 +728,20 @@ if is_ready:
     sum_col2.metric("Actual Protein", f"{delivered_pro:.1f} g", f"Target: {target_pro:.1f}")
     
     sum_col3.metric("Total Volume", f"{delivered_vol:.0f} ml", f"Limit: {fluid_limit} ml")
+
+    # แสดง GIR และสถานะความปลอดภัย
+    status_g_color = "green" if current_gir <= max_gir else "red"
+    st.markdown(f"**GIR:** :{status_g_color}[{current_gir:.2f} mg/kg/min] (Max {max_gir})")
+    st.caption(f"Glucose Load: {current_gm_kg_day:.2f} g/kg/day")
     
     # Lipid Safety
     actual_lipid_rate = (final_rate * lipid_per_ml) / weight
     sum_col3.metric("Lipid Infusion Rate", f"{actual_lipid_rate:.3f} g/kg/hr", "Max 0.11")
 
+    if current_gir > max_gir: 
+        st.error(f"🚨 GIR ({current_gir:.2f}) สูงเกินเกณฑ์มาตรฐานสำหรับ {location}!")
+    if actual_lipid_rate > 0.11: 
+        st.error(f"🚨 Lipid Rate ({actual_lipid_rate:.3f}) > 0.11 g/kg/hr!")
     if actual_lipid_rate > 0.11: st.error(f"🚨 Lipid Rate ({actual_lipid_rate:.3f}) > 0.11 g/kg/hr!")
     if delivered_vol > fluid_limit: st.error(f"⚠️ Volume ({delivered_vol:.0f}ml) > Limit ({fluid_limit}ml)")
 
@@ -555,32 +754,34 @@ if st.button("📄 Prepare Report & Generate PDF"):
     inds = []
     if c1: inds.append("Malnutrition/Risk")
     if c2: inds.append("Inadequate intake <60%")
-    if c3: inds.append("Stable Hemodynamic")
-    if c4: inds.append("Not End-of-life")
+    if c3: inds.append("Not End-of-life")
 
     # 2. เตรียมรายละเอียดความเสี่ยง Refeeding
     rf_details = []
-    if rf_a1: rf_details.append("BMI < 16")
-    if rf_a2: rf_details.append("Weight loss > 15%")
-    if rf_a3: rf_details.append("Starvation > 10 days")
-    if rf_a4: rf_details.append("Low electrolytes")
-    if rf_b1: rf_details.append("BMI < 18.5")
-    if rf_b2: rf_details.append("Weight loss > 10%")
-    if rf_b3: rf_details.append("Starvation > 5 days")
-    if rf_b4: rf_details.append("Alcohol/Drugs history")
+    if rf_vh1: rf_details.append("Very High Risk Criteria")
+    if rf_m1: rf_details.append("BMI < 16.5")
+    if rf_m2: rf_details.append("Weight loss > 15%")
+    if rf_m3: rf_details.append("Starvation > 10 days")
+    if rf_m4: rf_details.append("Low electrolytes")
+    
+    if rf_min1: rf_details.append("BMI < 18.5")
+    if rf_min2: rf_details.append("Weight loss > 10%")
+    if rf_min3: rf_details.append("Starvation > 5 days")
+    if rf_min4: rf_details.append("Alcohol abuse/Insulin/Chemo/Diuretic history")
 
     # 3. จัดเตรียมข้อมูล (ใส่ข้อมูลให้ครบถ้วนใน dictionary)
     report_data = {
-        "name": name, "age": age, "ward": ward, "weight": weight, "height": height, "bmi": bmi, "ibw": ibw,
+        "name": name, "age": age, "ward": ward, "weight": weight, "height": height, "bmi": bmi, "ibw": ibw, "adj_bw": adj_bw,
+        "comorbidities": comorbidities,
         "indications": inds, "en_contra": e_list,
         "naf_score": st.session_state.naf_score_total, "naf_cat": st.session_state.naf_category,
-        "mal_level": mal_level, "is_refeeding": "High Risk" if is_refeeding_risk else "Normal Risk", 
+        "mal_level": mal_level, "is_refeeding": refeed_level,
         "refeeding_details": rf_details,
-        "target_kcal": target_kcal, "target_pro": target_pro, "fluid_limit": fluid_limit,
+        "target_kcal": target_kcal, "target_pro": target_pro, "pro_display": pro_display, "fluid_limit": fluid_limit,
         "pn_name": selected_pn_name, "final_rate": final_rate, "final_ami_rate": final_ami_rate,
         "hours": infusion_hours, "actual_pn_vol": actual_pn_vol, "actual_ami_vol": actual_ami_vol,
         "add_amiparen": add_amiparen, "delivered_kcal": delivered_kcal, "delivered_pro": delivered_pro,
-        "delivered_vol": delivered_vol, "actual_lipid_rate": actual_lipid_rate,
+        "delivered_vol": delivered_vol, "actual_lipid_rate": actual_lipid_rate, "current_gir": current_gir, "max_gir": max_gir, "current_gm_kg": current_gm_kg_day,
         "soluvit": add_soluvit, "vitalipid": add_vitalipid, "addamel": add_addamel, "b_complex": b_complex_vials,
         "kcl": kcl_val, "k2po4": k2po4_val,
         "physician_1": physician_1 if physician_1 else "....................",
@@ -612,5 +813,3 @@ if st.session_state.pdf_output is not None:
         )
     except Exception as e:
         st.error(f"เกิดข้อผิดพลาดในการเตรียมไฟล์ดาวน์โหลด: {e}")
-
-
